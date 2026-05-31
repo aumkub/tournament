@@ -1,4 +1,5 @@
 import { createRequestHandler } from "react-router";
+import { TournamentRoom } from "./tournament-room";
 
 declare module "react-router" {
 	export interface AppLoadContext {
@@ -13,6 +14,8 @@ const requestHandler = createRequestHandler(
 	() => import("virtual:react-router/server-build"),
 	import.meta.env.MODE,
 );
+
+export { TournamentRoom };
 
 export default {
 	fetch(request, env, ctx) {

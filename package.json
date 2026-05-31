@@ -14,18 +14,29 @@
 		"publish": true
 	},
 	"dependencies": {
+		"daisyui": "^5.5.20",
+		"drizzle-orm": "^0.45.2",
 		"isbot": "5.1.32",
+		"papaparse": "^5.5.3",
+		"qrcode-generator": "^2.0.4",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
-		"react-router": "7.9.6"
+		"react-router": "7.9.6",
+		"shadcn": "^4.8.3",
+		"uuid": "^14.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "1.15.3",
+		"@cloudflare/workers-types": "^4.20260531.1",
 		"@react-router/dev": "7.9.6",
 		"@tailwindcss/vite": "4.1.17",
 		"@types/node": "24.10.1",
+		"@types/papaparse": "^5.5.2",
+		"@types/qrcode-generator": "^0.0.16",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
+		"@types/uuid": "^10.0.0",
+		"drizzle-kit": "^0.31.10",
 		"tailwindcss": "4.1.17",
 		"typescript": "5.9.3",
 		"vite": "^6.0.0",

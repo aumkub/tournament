@@ -1,16 +1,457 @@
-@import "tailwindcss" source(".");
-
-@theme {
-	--font-sans:
-		"Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+@import "tailwindcss";
+@plugin "daisyui" {
+	themes: tournament --default;
 }
 
-html,
-body {
-	@apply bg-white dark:bg-gray-950;
+/* ── DaisyUI custom theme matching DESIGN.md ─────── */
 
-	@media (prefers-color-scheme: dark) {
-		color-scheme: dark;
-	}
+@plugin "daisyui/theme" {
+	name: "tournament";
+	default: true;
+	color-scheme: light;
+
+	/* Base surfaces → DESIGN.md canvas family */
+	--color-base-100: #faf9f5; /* canvas */
+	--color-base-200: #f5f0e8; /* surface-soft */
+	--color-base-300: #efe9de; /* surface-card */
+	--color-base-content: #141413; /* ink */
+
+	/* Primary → DESIGN.md coral */
+	--color-primary: #cc785c;
+	--color-primary-content: #ffffff;
+
+	/* Secondary → DESIGN.md dark surface */
+	--color-secondary: #252320; /* surface-dark-elevated */
+	--color-secondary-content: #faf9f5; /* on-dark */
+
+	/* Accent → DESIGN.md teal */
+	--color-accent: #5db8a6;
+	--color-accent-content: #ffffff;
+
+	/* Neutral */
+	--color-neutral: #3d3d3a; /* body */
+	--color-neutral-content: #faf9f5;
+
+	/* Semantic → DESIGN.md */
+	--color-success: #5db872;
+	--color-success-content: #ffffff;
+	--color-warning: #d4a017;
+	--color-warning-content: #ffffff;
+	--color-error: #c64545;
+	--color-error-content: #ffffff;
+	--color-info: #5db8a6;
+	--color-info-content: #ffffff;
+
+	/* Radius → DESIGN.md scale */
+	--radius-selector: 0.5rem;  /* sm */
+	--radius-field: 0.5rem;    /* md = 8px */
+	--radius-box: 0.75rem;     /* lg */
+
+	/* Size */
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 0;
+	--noise: 0;
+}
+
+/* ── DESIGN.md custom tokens ──────────────────────── */
+
+@theme {
+	/* Brand & Accent */
+	--color-primary-active: #a9583e;
+	--color-primary-disabled: #e6dfd8;
+	--color-accent-amber: #e8a55a;
+
+	/* Extra surfaces */
+	--color-surface-cream-strong: #e8e0d2;
+	--color-surface-dark: #181715;
+	--color-surface-dark-elevated: #252320;
+	--color-surface-dark-soft: #1f1e1b;
+
+	/* Borders */
+	--color-hairline: #e6dfd8;
+	--color-hairline-soft: #ebe6df;
+
+	/* Text extras */
+	--color-ink: #141413;
+	--color-body-strong: #252523;
+	--color-body: #3d3d3a;
+	--color-muted: #6c6a64;
+	--color-muted-soft: #8e8b82;
+	--color-on-dark: #faf9f5;
+	--color-on-dark-soft: #a09d96;
+
+	/* Typography */
+	--font-heading: "Google Sans", "Noto Sans Thai", system-ui, sans-serif;
+	--font-body: "Google Sans Text", "Noto Sans Thai", system-ui, sans-serif;
+	--font-sans: "Google Sans Text", system-ui, sans-serif;
+	--font-serif: "Google Sans", system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", Menlo, monospace;
+
+	/* Spacing */
+	--spacing-xxs: 4px;
+	--spacing-xs: 8px;
+	--spacing-sm: 12px;
+	--spacing-md: 16px;
+	--spacing-lg: 24px;
+	--spacing-xl: 32px;
+	--spacing-xxl: 48px;
+	--spacing-section: 96px;
+
+	/* Radius */
+	--radius-xs: 4px;
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-xl: 16px;
+	--radius-pill: 9999px;
+}
+
+/* ── Global resets ───────────────────────────────── */
+
+* {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+	font-family: var(--font-body);
+	background-color: oklch(100% 0 0);
+	color: var(--color-body);
+	font-size: 16px;
+	line-height: 1.7;
+	margin: 0;
+}
+
+/* Override DaisyUI base-100 to our cream canvas */
+body {
+	background-color: #faf9f5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-family: var(--font-heading);
+	font-weight: 600;
+	color: var(--color-ink);
+	line-height: 1.3;
+}
+
+/* ── DaisyUI overrides to match DESIGN.md ────────── */
+
+/* Input fields: match DESIGN.md text-input spec */
+.input {
+	background-color: #faf9f5;
+	border-color: #e6dfd8;
+	border-radius: var(--radius-md);
+	min-height: 40px;
+	font-family: var(--font-body);
+	font-size: 16px;
+	padding: 10px 14px;
+}
+.input:focus {
+	border-color: #cc785c;
+	box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
+	outline: none;
+}
+.input::placeholder {
+	color: #8e8b82;
+}
+
+/* Select */
+.select {
+	background-color: #faf9f5;
+	border-color: #e6dfd8;
+	border-radius: var(--radius-md);
+	min-height: 40px;
+	font-family: var(--font-body);
+	font-size: 16px;
+}
+.select:focus {
+	border-color: #cc785c;
+	box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
+}
+
+/* Textarea */
+.textarea {
+	background-color: #faf9f5;
+	border-color: #e6dfd8;
+	border-radius: var(--radius-md);
+	font-family: var(--font-body);
+	font-size: 16px;
+	padding: 10px 14px;
+	resize: vertical;
+}
+.textarea:focus {
+	border-color: #cc785c;
+	box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
+	outline: none;
+}
+.textarea::placeholder {
+	color: #8e8b82;
+}
+
+/* Buttons: match DESIGN.md button-primary/secondary */
+.btn {
+	font-family: var(--font-heading);
+	font-weight: 500;
+	font-size: 14px;
+	min-height: 40px;
+	border-radius: var(--radius-md);
+	transition: background 0.15s;
+}
+
+.btn-primary {
+	background-color: #cc785c;
+	border-color: #cc785c;
+	color: #ffffff;
+}
+.btn-primary:hover {
+	background-color: #a9583e;
+	border-color: #a9583e;
+}
+.btn-primary:disabled {
+	background-color: #e6dfd8;
+	border-color: #e6dfd8;
+	cursor: not-allowed;
+}
+
+.btn-secondary {
+	background-color: #faf9f5;
+	border-color: #e6dfd8;
+	color: #141413;
+}
+.btn-secondary:hover {
+	background-color: #f5f0e8;
+}
+
+.btn-ghost {
+	color: #141413;
+}
+.btn-ghost:hover {
+	background-color: #f5f0e8;
+}
+
+/* Form label */
+.label {
+	font-size: 14px;
+	font-weight: 500;
+	color: #141413;
+}
+
+/* Radio */
+.radio {
+	border-color: #e6dfd8;
+}
+.radio:checked {
+	border-color: #cc785c;
+	background-color: #cc785c;
+	background-size: 120% 120%;
+}
+
+/* Checkbox */
+.checkbox {
+	border-color: #e6dfd8;
+}
+.checkbox:checked {
+	border-color: #cc785c;
+	background-color: #cc785c;
+	background-size: 120% 120%;
+}
+
+/* ── Legacy utility classes (kept for non-DaisyUI usage) ── */
+
+.btn-primary-legacy {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 20px;
+	min-height: 40px;
+	background: #cc785c;
+	color: #ffffff;
+	font-size: 14px;
+	font-weight: 500;
+	font-family: var(--font-heading);
+	border: none;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition: background 0.15s;
+	text-decoration: none;
+}
+.btn-primary-legacy:hover {
+	background: #a9583e;
+}
+.btn-primary-legacy:disabled {
+	background: #e6dfd8;
+	cursor: not-allowed;
+}
+
+.btn-secondary-legacy {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 20px;
+	min-height: 40px;
+	background: #faf9f5;
+	color: #141413;
+	font-size: 14px;
+	font-weight: 500;
+	font-family: var(--font-heading);
+	border: 1px solid #e6dfd8;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition: background 0.15s;
+	text-decoration: none;
+}
+.btn-secondary-legacy:hover {
+	background: #f5f0e8;
+}
+
+/* ── Cards ──────────────────────────────────────── */
+
+.card {
+	background: #efe9de;
+	border-radius: var(--radius-lg);
+	padding: var(--spacing-xl);
+}
+
+.dark-card {
+	background: #181715;
+	color: #faf9f5;
+	border-radius: var(--radius-lg);
+	padding: var(--spacing-xl);
+}
+
+/* ── Tags / Badges ──────────────────────────────── */
+
+.badge-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 12px;
+	background: #efe9de;
+	color: #141413;
+	font-size: 13px;
+	font-weight: 500;
+	font-family: var(--font-heading);
+	border-radius: var(--radius-pill);
+}
+.badge-coral {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 12px;
+	background: #cc785c;
+	color: #ffffff;
+	font-size: 12px;
+	font-weight: 500;
+	font-family: var(--font-heading);
+	letter-spacing: 0.5px;
+	border-radius: var(--radius-pill);
+}
+
+/* ── Progress bar ───────────────────────────────── */
+
+.progress-bar {
+	width: 100%;
+	height: 8px;
+	background: #f5f0e8;
+	border-radius: var(--radius-pill);
+	overflow: hidden;
+}
+.progress-bar-fill {
+	height: 100%;
+	background: #cc785c;
+	border-radius: var(--radius-pill);
+	transition: width 0.3s ease;
+}
+
+/* ── Toast / Feedback overlays ──────────────────── */
+
+.feedback-success {
+	background: #5db872;
+	color: white;
+}
+.feedback-warning {
+	background: #d4a017;
+	color: white;
+}
+.feedback-error {
+	background: #c64545;
+	color: white;
+}
+
+/* ── Global Thai readability ────────────────────── */
+
+p, span, li, td, th, a, option {
+	font-size: max(15px, 1em);
+	line-height: 1.7;
+}
+
+/* ── Step indicator ─────────────────────────────── */
+
+.step-indicator {
+	display: flex;
+	gap: var(--spacing-sm);
+	align-items: center;
+}
+.step-dot {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 15px;
+	font-weight: 600;
+	border: 2px solid #e6dfd8;
+	color: #6c6a64;
+	background: #faf9f5;
+}
+.step-dot.active {
+	border-color: #cc785c;
+	color: #cc785c;
+	background: #faf9f5;
+}
+.step-dot.completed {
+	border-color: #cc785c;
+	color: #ffffff;
+	background: #cc785c;
+}
+.step-line {
+	flex: 1;
+	height: 2px;
+	background: #e6dfd8;
+}
+.step-line.completed {
+	background: #cc785c;
+}
+
+/* ── File upload drop zone ──────────────────────── */
+
+.upload-zone {
+	border: 2px dashed #e6dfd8;
+	border-radius: var(--radius-md);
+	padding: var(--spacing-lg);
+	text-align: center;
+	cursor: pointer;
+	background: #faf9f5;
+	transition: border-color 0.15s;
+}
+.upload-zone:hover {
+	border-color: #cc785c;
+}
+
+/* ── Field label (for non-DaisyUI spots) ────────── */
+
+.field-label {
+	display: block;
+	font-size: 14px;
+	font-weight: 500;
+	margin-bottom: 4px;
+	color: #141413;
+	line-height: 1.4;
 }

@@ -8,7 +8,45 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
-	"vars": {
-		"VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare"
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "tournament-db",
+			"database_id": "87915c72-a792-4cdf-808a-c08458f9a513"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "tournament-uploads"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "SESSIONS",
+			"id": "7715752a30834365a537e6f8df311761"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "TOURNAMENT_ROOM",
+				"class_name": "TournamentRoom"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["TournamentRoom"]
+		}
+	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "EMAIL_QUEUE",
+				"queue": "send-qr-email"
+			}
+		]
 	}
 }

@@ -5,10 +5,15 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useRouteLoaderData,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { parseCookie, verifySession } from "../lib/kv-session";
+import { Header } from "../components/ui/header";
+
+export const id = "root";
 
 export const links: Route.LinksFunction = () => [
 	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -19,21 +24,37 @@ export const links: Route.LinksFunction = () => [
 	},
 	{
 		rel: "stylesheet",
-		href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+		href: "https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500;600;700&display=swap",
 	},
 ];
 
+export async function loader({ request, context }: Route.LoaderArgs) {
+	const env = context.cloudflare.env;
+	const token = parseCookie(request.headers.get("Cookie"));
+	let authenticated = false;
+
+	if (token) {
+		const session = await verifySession(env.SESSIONS, token);
+		authenticated = !!session;
+	}
+
+	return { authenticated };
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
+		<html lang="th">
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<Meta />
 				<Links />
 			</head>
-			<body>
-				{children}
+			<body style={{ margin: 0, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+				<Header />
+				<div style={{ flex: 1 }}>
+					{children}
+				</div>
 				<ScrollRestoration />
 				<Scripts />
 			</body>
@@ -62,11 +83,25 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 	}
 
 	return (
-		<main className="pt-16 p-4 container mx-auto">
-			<h1>{message}</h1>
-			<p>{details}</p>
+		<main style={{ padding: "var(--spacing-section) var(--spacing-lg)", maxWidth: 640, margin: "0 auto", textAlign: "center" }}>
+			<h1 style={{ fontSize: 48, fontFamily: "var(--font-serif)" }}>{message}</h1>
+			<p style={{ color: "var(--color-body)", fontSize: 16 }}>{details}</p>
+			<a href="/" className="btn btn-primary" style={{ textDecoration: "none", marginTop: "var(--spacing-lg)", display: "inline-block", lineHeight: "40px" }}>
+				กลับหน้าหลัก
+			</a>
 			{stack && (
-				<pre className="w-full p-4 overflow-x-auto">
+				<pre
+					style={{
+						width: "100%",
+						padding: "var(--spacing-md)",
+						overflowX: "auto",
+						marginTop: "var(--spacing-lg)",
+						fontSize: 12,
+						textAlign: "left",
+						background: "var(--color-surface-soft)",
+						borderRadius: "var(--radius-md)",
+					}}
+				>
 					<code>{stack}</code>
 				</pre>
 			)}
