@@ -54,23 +54,6 @@ async function clearFailures(kv: KVNamespace, ip: string, slug: string) {
 	await kv.delete(rateLimitKey(ip, slug));
 }
 
-async function verifyTurnstile(token: string, secret: string, ip?: string): Promise<boolean> {
-	const body = new FormData();
-	body.append("secret", secret);
-	body.append("response", token);
-	if (ip) body.append("remoteip", ip);
-
-	try {
-		const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-			method: "POST",
-			body,
-		});
-		const data = await res.json() as { success: boolean };
-		return data.success;
-	} catch {
-		return false;
-	}
-}
 
 export async function action({ request, params, context }: Route.ActionArgs) {
 	const env = context.cloudflare.env;
@@ -87,25 +70,16 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		);
 	}
 
-	const body = await request.json() as { password: string; turnstileToken?: string; website?: string };
-	const { password, turnstileToken, website } = body;
+	const body = await request.json() as { password: string; website?: string };
+	const { password, website } = body;
 
 	// Honeypot — bots fill "website" field
 	if (website) {
-		// Silently reject — pretend success to confuse bots
 		return Response.json({ role: "assistant" }, { status: 200 });
 	}
 
 	if (!password) {
 		return Response.json({ error: "Password required" }, { status: 400 });
-	}
-
-	// Verify Turnstile challenge
-	if (env.TURNSTILE_SECRET && turnstileToken) {
-		const valid = await verifyTurnstile(turnstileToken, env.TURNSTILE_SECRET, ip);
-		if (!valid) {
-			return Response.json({ error: "การยืนยัน Turnstile ล้มเหลว กรุณาลองใหม่" }, { status: 400 });
-		}
 	}
 
 	// Look up tournament by slug

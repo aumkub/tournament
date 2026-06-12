@@ -31,7 +31,7 @@ export function Header() {
 					<span className="inline-flex items-center justify-center w-7 h-7 bg-primary text-white text-sm font-bold rounded-md leading-none">
 						T
 					</span>
-					<span className="text-base font-semibold text-ink">Tournament</span>
+					<span className="text-base font-semibold text-ink">all Thailand</span>
 				</a>
 
 				{/* Desktop nav — hidden on mobile */}

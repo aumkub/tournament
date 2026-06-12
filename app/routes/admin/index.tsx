@@ -25,10 +25,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		ORDER BY t.created_at DESC`,
 	).all();
 
-	const turnstileSiteKey = (env as any).TURNSTILE_SITE_KEY || "";
+
 
 	if (!session) {
-		return { authenticated: false as const, role: null, tournamentId: null, tournaments: results.results, redirectSlug: null, turnstileSiteKey };
+		return { authenticated: false as const, role: null, tournamentId: null, tournaments: results.results, redirectSlug: null };
 	}
 
 	if (session.role === "assistant") {
@@ -39,7 +39,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			tournamentId: session.tournamentId,
 			tournaments: results.results,
 			redirectSlug: t?.slug || null,
-		turnstileSiteKey,
+
 		};
 	}
 
@@ -49,7 +49,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		tournamentId: session.tournamentId,
 		tournaments: results.results,
 		redirectSlug: null,
-		turnstileSiteKey,
+
 	};
 }
 
@@ -57,16 +57,6 @@ export function meta() {
 	return [{ title: "Admin — Tournament Management" }];
 }
 
-// Extend window for Turnstile
-declare global {
-	interface Window {
-		turnstile?: {
-			getResponse: (widgetId?: string) => string | undefined;
-			reset: (widgetId?: string) => void;
-			render: (container: string | HTMLElement, params: object) => string;
-		};
-	}
-}
 
 export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 	const [authenticating, setAuthenticating] = useState(false);
@@ -75,9 +65,6 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 	const [error, setError] = useState<string | null>(null);
 	const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
 	const [selectedSlug, setSelectedSlug] = useState("");
-	const turnstileRef = useRef<HTMLDivElement>(null);
-	const turnstileWidgetId = useRef<string | null>(null);
-	const siteKey = (loaderData as any).turnstileSiteKey as string;
 	const tournaments = loaderData.tournaments as any[];
 
 	// Create tournament state
@@ -119,32 +106,6 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 		}
 	}, [loaderData.authenticated, loaderData.redirectSlug]);
 
-	// Load Turnstile script and render widget when on login view
-	useEffect(() => {
-		if (loaderData.authenticated || !siteKey) return;
-		const existing = document.getElementById("cf-turnstile-script");
-		if (!existing) {
-			const script = document.createElement("script");
-			script.id = "cf-turnstile-script";
-			script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-			script.async = true;
-			script.defer = true;
-			document.head.appendChild(script);
-		}
-		// Render widget once script loads
-		const tryRender = () => {
-			if (window.turnstile && turnstileRef.current && !turnstileWidgetId.current) {
-				turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
-					sitekey: siteKey,
-					theme: "light",
-				});
-			}
-		};
-		const interval = setInterval(() => {
-			if (window.turnstile) { tryRender(); clearInterval(interval); }
-		}, 200);
-		return () => clearInterval(interval);
-	}, [loaderData.authenticated, siteKey]);
 
 	const handleCreate = async () => {
 		if (!createForm.name.trim()) {
@@ -209,13 +170,6 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 			// Honeypot — bots fill hidden field, humans don't
 			if (honeypot) return;
 
-			// Get Turnstile token
-			const turnstileToken = siteKey && window.turnstile ? window.turnstile.getResponse(turnstileWidgetId.current ?? undefined) : undefined;
-			if (siteKey && !turnstileToken) {
-				setError("กรุณายืนยัน Turnstile ก่อน");
-				return;
-			}
-
 			setAuthenticating(true);
 			setError(null);
 
@@ -223,7 +177,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 				const res = await fetch(`/api/auth/${selectedSlug}`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ password, turnstileToken, website: honeypot || undefined }),
+					body: JSON.stringify({ password, website: honeypot || undefined }),
 				});
 				const data = await res.json();
 				if (!res.ok) {
@@ -238,10 +192,6 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 				}
 			} catch (err: any) {
 				setError(err.message);
-				// Reset Turnstile on failure so user can retry
-				if (siteKey && window.turnstile) {
-					window.turnstile.reset(turnstileWidgetId.current ?? undefined);
-				}
 			} finally {
 				setAuthenticating(false);
 			}
@@ -287,12 +237,6 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						<label className="label">รหัสผ่าน</label>
 						<input className="input w-full" type="password" placeholder="ใส่รหัสผ่าน..." value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} />
 					</div>
-
-					{siteKey && (
-						<div className="mb-md flex justify-center">
-							<div ref={turnstileRef} />
-						</div>
-					)}
 
 					<button className="btn btn-primary w-full" onClick={handleLogin} disabled={authenticating || tournaments.length === 0}>
 						{authenticating ? "กำลังตรวจสอบ..." : "เข้าสู่ระบบ"}

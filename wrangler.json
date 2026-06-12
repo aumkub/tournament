@@ -43,10 +43,7 @@
 			"new_classes": ["TournamentRoom"]
 		}
 	],
-	"vars": {
-		"TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
-	},
-	"queues": {
+"queues": {
 		"producers": [
 			{
 				"binding": "EMAIL_QUEUE",
