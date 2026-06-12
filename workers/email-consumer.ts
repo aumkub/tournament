@@ -1,6 +1,7 @@
 // Email consumer — processes email queue jobs
 import { generateQRCodeImageHTML } from "../lib/qrcode";
-import { renderEmailTemplate, wrapEmailBody, DEFAULT_EMAIL_BODY } from "../lib/email";
+import { renderEmailTemplate, wrapEmailBody } from "../lib/email";
+import { getDefaultEmailTemplate } from "../lib/email-templates/index";
 
 interface EmailQueueMessage {
 	registrationId: string;
@@ -33,22 +34,42 @@ export default {
 				if (!tournament) continue;
 
 				const dataJson = JSON.parse(reg.data_json as string);
-				const name = dataJson.full_name_th || dataJson.full_name_en || "ผู้ลงทะเบียน";
-				const typeLabel =
-					(reg.type as string) === "competitor"
-						? "ผู้เข้าแข่งขัน"
-						: "ผู้เข้าร่วมงาน";
+				const regType = reg.type as string;
+				const name =
+					dataJson.child_full_name_th ||
+					dataJson.full_name_th ||
+					dataJson.full_name ||
+					dataJson.full_name_en ||
+					"ผู้ลงทะเบียน";
+				const TYPE_LABELS: Record<string, string> = {
+					competitor: "ผู้เข้าแข่งขัน",
+					attendee: "ผู้ชม",
+					youth: "เยาวชน",
+				};
+				const typeLabel = TYPE_LABELS[regType] || regType;
 
-				// Use tournament template or default body
+				// Pick template: per-type override → legacy single template → file default
+				let emailTemplates: Record<string, string> = {};
+				try { emailTemplates = JSON.parse((tournament.email_templates_json as string) || "{}"); } catch { /* ignore */ }
 				const bodyTemplate =
-					(tournament.email_template_html as string) || DEFAULT_EMAIL_BODY;
+					emailTemplates[regType] ||
+					(tournament.email_template_html as string) ||
+					getDefaultEmailTemplate(regType);
 
-				// Render variables into the body
+				const youthPath = dataJson.youth_path as string | undefined;
+				const youthPathLabel = youthPath === "beat_pro" ? "Beat the Pro (Path B)" : "ทั่วไป (Path A)";
+				const attendanceDays = Array.isArray(dataJson.attendance_days)
+					? (dataJson.attendance_days as string[]).join(", ")
+					: (dataJson.attendance_days as string) || "-";
+
 				const renderedBody = renderEmailTemplate(bodyTemplate, {
 					registrant_name: name,
 					tournament_name: tournament.name as string,
 					registration_type: typeLabel,
 					preferred_date: dataJson.preferred_date || "-",
+					child_name: dataJson.child_full_name_th || dataJson.child_full_name_en || name,
+					youth_path_label: youthPathLabel,
+					attendance_days: attendanceDays,
 					checkin_open_date: new Date(
 						tournament.checkin_open_at as number,
 					).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }),

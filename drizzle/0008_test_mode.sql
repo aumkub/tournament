@@ -1,0 +1,1 @@
+ALTER TABLE tournaments ADD COLUMN test_mode INTEGER NOT NULL DEFAULT 0;

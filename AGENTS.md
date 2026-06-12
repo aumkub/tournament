@@ -2,9 +2,11 @@
 
 ## Project Overview
 
-Build a full-stack **Tournament Registration & Check-in Management System** for event organizers. The system supports two distinct user-facing registration flows (Competitor vs. Attendee) and a role-gated admin dashboard with real-time check-in tracking, QR code scanning, and CSV export.
+Build a full-stack **Tournament Registration & Check-in Management System** for event organizers. The system supports **dynamic, configurable registration forms** via a form config system and a role-gated admin dashboard with real-time check-in tracking, QR code scanning, and CSV export.
 
 **Deployment target: 100% Cloudflare stack.** Every service must use a Cloudflare product. No Supabase, no Vercel, no AWS.
+
+**Framework: React Router 7** (not Next.js) with `@cloudflare/vite-plugin` adapter for Workers deployment.
 
 ---
 
@@ -14,47 +16,56 @@ Each feature is mapped to the correct Cloudflare product. Use the table below as
 
 | Feature | Cloudflare Service | Notes |
 |---|---|---|
-| **Frontend + SSR** | **Cloudflare Workers** (via `@opennextjs/cloudflare`) | Deploy Next.js App Router on Workers. Use `npm create cloudflare@latest -- --framework=next --platform=workers`. NOT Pages — Workers is now preferred for full-stack Next.js. |
+| **Frontend + SSR** | **Cloudflare Workers** (via React Router 7) | Deploy React Router 7 on Workers. Use `npm create cloudflare@latest -- --framework=react-router`. Entry point: `workers/app.ts` which exports `TournamentRoom` DO. |
 | **Primary Database** | **Cloudflare D1** (SQLite at the edge) | All structured data: tournaments, registrations, check-ins. Access via Workers binding `env.DB`. Use Drizzle ORM or `@cloudflare/d1` driver directly. |
 | **File Storage** | **Cloudflare R2** | Store uploaded files: applicant photos, intro videos, golf swing videos, official scoreboard files. Access via Workers binding `env.BUCKET`. Serve via public R2 custom domain. |
 | **Real-time (Check-in feed + Stats)** | **Cloudflare Durable Objects** + WebSocket | One Durable Object per tournament (`TournamentRoom`). Admin dashboard opens a WebSocket to the DO. When a QR scan check-in happens, the Worker writes to D1 then broadcasts the event to all connected admin dashboards via the DO. Use Hibernation WebSocket API to reduce cost. |
 | **Session / Role Cache** | **Cloudflare KV** | Store hashed role tokens per session (short TTL: 8h). Key: `session:{token}` → `{ role, tournamentId }`. Stateless Workers validate session by KV lookup. |
-| **Email (QR Code delivery)** | **Cloudflare Email Service** (public beta) | Native Workers binding — no API keys needed. Use `env.EMAIL` binding to send transactional emails. Auto-handles SPF/DKIM/DMARC. Fallback: Resend API via `fetch()` if Email Service binding is unavailable in the project's plan. |
-| **Background Jobs (email queue)** | **Cloudflare Queues** | After registration, push job to queue: `{ type: 'send_qr_email', registrationId }`. Consumer Worker generates QR, renders template, sends email. Keeps registration response fast (off the hot path). |
-| **Static Assets (images, CSS, JS)** | **Cloudflare Workers Assets** | Bundled automatically by `@opennextjs/cloudflare`. CDN-cached globally at 300+ PoPs. |
-| **DNS & Domain** | **Cloudflare DNS** | Manage all DNS records. Auto-configure SPF/DKIM for Email Service. Custom domain for R2 bucket (file delivery). |
-| **Secrets Management** | **Cloudflare Workers Secrets** (via `wrangler secret put`) | Store sensitive values: hashed super_admin seed password, Email Service credentials (if using Resend fallback). Never in `.env` committed to git. |
+| **Email (QR Code delivery)** | **Resend API** | Sends transactional emails via HTTP fetch. API key stored in Workers Secrets. QR codes generated on-demand using `qrcode-generator` npm package. |
+| **Static Assets (images, CSS, JS)** | **Cloudflare Workers Assets** | Bundled automatically by React Router build. CDN-cached globally at 300+ PoPs. |
+| **DNS & Domain** | **Cloudflare DNS** | Manage all DNS records. Custom domain for R2 bucket (file delivery). |
+| **Secrets Management** | **Cloudflare Workers Secrets** (via `wrangler secret put`) | Store sensitive values: Resend API key. Never in `.env` committed to git. |
 | **CI/CD** | **Cloudflare Workers CI** (GitHub Actions + `wrangler deploy`) | On push to `main` → run `wrangler deploy`. Preview deployments on PR branches. |
 
 ---
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 (App Router), TypeScript
-- **Cloudflare Adapter**: `@opennextjs/cloudflare` — required for Workers deployment
-- **Runtime config**: `next.config.mjs` must call `initOpenNextCloudflareForDev()` in dev
-- **UI Components**: shadcn/ui — follow `DESIGN.md`
+- **Framework**: React Router 7, TypeScript
+- **Cloudflare Adapter**: `@cloudflare/vite-plugin` + `@react-router/dev` — Workers deployment
+- **UI Components**: daisyui + shadcn — follow `DESIGN.md`
 - **ORM**: Drizzle ORM with `drizzle-orm/d1` dialect
-- **QR Code Gen**: `qrcode` npm package (server-side PNG generation)
+- **QR Code Gen**: `qrcode-generator` npm package (client-side SVG generation)
 - **QR Code Scan**: `html5-qrcode` (client-side, camera API)
-- **CSV Export**: `papaparse` or `json2csv`
-- **Local Dev**: `wrangler dev` with `.dev.vars` for secrets; Miniflare emulates D1, R2, KV, DO, Queues locally
+- **CSV Export**: `papaparse`
+- **Local Dev**: `wrangler dev` with `.dev.vars` for secrets; Miniflare emulates D1, R2, KV, DO locally
+- **Password Hashing**: Web Crypto API PBKDF2 (no bcrypt dependency needed)
+- **Forms**: Dynamic form config system (`lib/form-configs/`) with TypeScript-defined field types
 
 ---
 
 ## Design System
 
-All components must follow `DESIGN.md` conventions. Use shadcn/ui primitives throughout. Admin UI should feel clean and dashboard-like (data-dense, functional). Public registration pages should feel polished and welcoming.
+All components must follow `DESIGN.md` conventions. The design uses:
+- **daisyui** + **Tailwind CSS** for styling
+- **Anthropic-inspired warm cream + coral aesthetic** (#faf9f5 canvas, #cc785c primary)
+- **Copernicus/Tiempos Headline serif** for display headlines with negative letter-spacing
+- **Inter/StyreneB sans** for body text
+
+Admin UI should feel clean and dashboard-like (data-dense, functional). Public registration pages should feel polished and welcoming.
 
 ---
 
-## Cloudflare Bindings (`wrangler.jsonc`)
+## Cloudflare Bindings (`wrangler.json`)
 
 ```jsonc
 {
-  "name": "tournament-app",
-  "compatibility_date": "2025-09-01",
+  "name": "tournament",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2025-10-08",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "upload_source_maps": true,
 
   // D1 — primary database
   "d1_databases": [
@@ -91,25 +102,25 @@ All components must follow `DESIGN.md` conventions. Use shadcn/ui primitives thr
     ]
   },
   "migrations": [
-    { "tag": "v1", "new_classes": ["TournamentRoom"] }
+    {
+      "tag": "v1",
+      "new_classes": ["TournamentRoom"]
+    }
   ],
 
-  // Queues — background email jobs
+  // Queues — producer only (consumer NOT configured)
   "queues": {
     "producers": [
-      { "binding": "EMAIL_QUEUE", "queue": "send-qr-email" }
-    ],
-    "consumers": [
-      { "queue": "send-qr-email", "max_batch_size": 10 }
+      {
+        "binding": "EMAIL_QUEUE",
+        "queue": "send-qr-email"
+      }
     ]
-  },
-
-  // Email Service — native sending binding (public beta)
-  "send_email": [
-    { "name": "EMAIL" }
-  ]
+  }
 }
 ```
+
+**Note**: Email queue consumer is not configured. Emails are sent directly via Resend API. The `EMAIL_QUEUE` binding exists for potential future use.
 
 ---
 
@@ -136,13 +147,13 @@ export const tournaments = sqliteTable('tournaments', {
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 })
 
-// registrations table — unified, type-discriminated
+// registrations table — unified, flexible type (no enum constraint)
 export const registrations = sqliteTable('registrations', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   tournament_id: text('tournament_id').notNull().references(() => tournaments.id),
-  type: text('type', { enum: ['competitor', 'attendee'] }).notNull(),
+  type: text('type').notNull(),                          // form config ID (e.g., 'competitor', 'attendee', 'youth')
   email: text('email').notNull(),
-  data_json: text('data_json').notNull(),                  // all form fields as JSON
+  data_json: text('data_json').notNull(),               // all form fields as JSON
   qr_code_token: text('qr_code_token').notNull().unique().$defaultFn(() => crypto.randomUUID()),
   checked_in: integer('checked_in', { mode: 'boolean' }).default(false),
   checked_in_at: integer('checked_in_at', { mode: 'timestamp' }),
@@ -159,73 +170,44 @@ type Tournament = {
   name: string
   slug: string
   photo_url: string | null
-  registration_limit: number | null       // จำกัดจำนวนการลงทะเบียน
+  competitor_url: string | null
+  attendee_url: string | null
+  competitor_title_en: string | null
+  attendee_title_en: string | null
+  competitor_form_id: string | null      // form config ID for competitor
+  attendee_form_id: string | null        // form config ID for attendee
+  registration_limit: number | null       // จำกัดจำนวนการลงทะเบียนทั้งหมด
+  competitor_limit: number | null        // จำกัดจำนวน competitor เฉพาะ
+  attendee_limit: number | null          // จำกัดจำนวน attendee เฉพาะ
   registration_open_at: Date              // วันที่เปิดลงทะเบียน
   registration_close_at: Date             // วันที่ปิดลงทะเบียน
   checkin_open_at: Date                   // วันที่เช็คอินได้
   checkin_close_at: Date                  // วันที่สิ้นสุดการเช็คอิน
-  email_template_html: string | null
+  email_template_html: string | null      // DEPRECATED — use email_templates_json
+  email_templates_json: string            // { "formId": "<html>" } per form type
+  form_urls_json: string                  // { "formId": "url-slug" } dynamic URLs
+  test_mode: boolean                      // เปิดโหมดทดสอบ
   passwords: {
-    assistant: string    // bcrypt hash
-    admin: string        // bcrypt hash
-    super_admin: string  // bcrypt hash
+    assistant: string    // PBKDF2 hash
+    admin: string        // PBKDF2 hash
+    super_admin: string  // PBKDF2 hash
   }
   created_at: Date
   updated_at: Date
 }
 
-type CompetitorData = {
-  // Personal
-  gender: 'male' | 'female'
-  full_name_th: string
-  full_name_en: string
-  nickname_th: string
-  nickname_en: string
-  age: string
-  academic_year: string
-  school: string
-  phone: string
-  golf_experience_years: string
-  preferred_date: 'both_with_beat' | 'both_no_beat' | 'sat_with_beat' | 'sat_only' | 'sun_only'
-  want_certificate: boolean
-  // Beat the Pro — R2 object keys (not full URLs)
-  applicant_photo_keys: string[]      // up to 2
-  intro_video_key: string
-  golf_swing_video_key: string
-  tournament_result_1: string
-  tournament_result_2: string
-  tournament_result_3: string
-  official_scoreboard_key: string
-  // PDPA
-  consent_personal_id: boolean
-  consent_contact_info: boolean
-  consent_photo_video: boolean
-  consent_third_party: boolean
-  consent_international_transfer: boolean
-  consent_data_retention: boolean
-  acknowledge_privacy_policy: boolean
-}
+// Form data is now dynamic — defined by FormConfig in lib/form-configs/
+// Each form config defines its own fields and their types
 
-type AttendeeData = {
-  gender: 'male' | 'female'
-  full_name_th: string
-  full_name_en: string
-  nickname_th: string
-  nickname_en: string
-  age: string
-  phone: string
-  organization: string                // หน่วยงาน / องค์กร
-  preferred_date: string
-  want_certificate: boolean
-  // PDPA (same fields as competitor)
-  consent_personal_id: boolean
-  consent_contact_info: boolean
-  consent_photo_video: boolean
-  consent_third_party: boolean
-  consent_international_transfer: boolean
-  consent_data_retention: boolean
-  acknowledge_privacy_policy: boolean
-}
+// Current form configs:
+// - attendee: Dynamic spectator/attendee form
+// - youth: Youth competition form with Beat the Pro section
+
+// Each registration stores: { [fieldKey]: fieldValue } in data_json
+// Field types: text, email, tel, date, number, select, multiselect, radio, checkbox, file, textarea, url
+
+// See types/form-config.ts for FormConfig interface
+// See lib/form-configs/ for available form definitions
 ```
 
 ---
@@ -242,8 +224,8 @@ No login system. Password-per-tournament-per-role. Verified server-side on every
 
 **Session flow:**
 1. User POSTs password to `/api/auth/[slug]`
-2. Server compares bcrypt hash against `tournament.passwords[role]` in D1
-3. On match: generate a random session token, store `{ role, tournamentId }` in **KV** with 8h TTL
+2. Server verifies PBKDF2 hash against `tournament.passwords[role]` in D1 using `lib/auth.ts`
+3. On match: generate a random session token (UUID v4), store `{ role, tournamentId }` in **KV** with 8h TTL
 4. Return token in `Set-Cookie: session=<token>; HttpOnly; Secure; SameSite=Strict`
 5. All admin API routes verify cookie → KV lookup → get role → authorize
 
@@ -257,8 +239,10 @@ No login system. Password-per-tournament-per-role. Verified server-side on every
 
 | Route | Description |
 |-------|-------------|
-| `/[slug]/register/competitor` | Multi-step registration form — ผู้เข้าแข่งขัน |
-| `/[slug]/register/attendee` | Registration form — ผู้เข้าร่วมงาน |
+| `/` | Tournament homepage / welcome page |
+| `/[slug]` | Redirects to default registration type (via `default_form_id` or first form URL) |
+| `/[slug]/register/:type` | Dynamic registration form by form config ID (e.g., `/slug/register/youth`) |
+| `/[slug]/register/success` | Success page with QR code after registration |
 
 ### Admin
 
@@ -275,13 +259,17 @@ No login system. Password-per-tournament-per-role. Verified server-side on every
 |-------|--------|------|-------------|
 | `/api/auth/[slug]` | POST | — | Verify password → set session cookie |
 | `/api/auth/logout` | POST | session | Clear session |
-| `/api/register/[slug]/competitor` | POST | — | Submit competitor form + enqueue email |
-| `/api/register/[slug]/attendee` | POST | — | Submit attendee form + enqueue email |
+| `/api/register/[slug]/form` | GET | — | Get form config JSON for given slug/type |
+| `/api/register/[slug]/form` | POST | — | Submit dynamic form + send email directly |
+| `/api/upload` | POST | — | Generate presigned R2 upload URL |
+| `/api/file` | GET | — | Serve file from R2 (proxied via Worker) |
 | `/api/checkin/[slug]` | POST | session (assistant+) | Mark check-in by QR token |
 | `/api/admin/[slug]/registrants` | GET | session (admin+) | Paginated registrant list |
+| `/api/admin/[slug]/registrants/:id` | DELETE | session (super_admin) | Delete a registration |
 | `/api/admin/[slug]/stats` | GET | session (admin+) | Aggregate counts |
 | `/api/admin/[slug]/export` | GET | session (super_admin) | Stream CSV download |
 | `/api/admin/[slug]/tournament` | PUT | session (super_admin) | Update tournament settings |
+| `/api/admin/tournaments` | GET | session (super_admin) | List all tournaments |
 | `/api/admin/tournaments` | POST | session (super_admin) | Create new tournament |
 | `/api/ws/[slug]` | WS | session (admin+) | WebSocket → Durable Object room |
 
@@ -372,37 +360,37 @@ tournament-uploads/
 
 ---
 
-## Email Architecture (Cloudflare Email Service + Queues)
+## Email Architecture (Resend API)
 
-**Why Queues?** File uploads and DB write happen first synchronously. Email is pushed to a Queue so the registration response is instant (~50ms). The consumer Worker sends the email asynchronously.
-
-**Send flow:**
+**Send flow (synchronous, no queue):**
 ```
 Registration API (Worker)
   → Write to D1
-  → env.EMAIL_QUEUE.send({ registrationId, tournamentId })
-  → Return 200 to user immediately
-
-Queue Consumer Worker (triggered async)
-  → Fetch registration from D1
-  → Fetch tournament email_template_html from D1
-  → Generate QR code PNG (qrcode npm)
-  → Upload QR PNG to R2 (key: qrcodes/{registrationId}.png)
+  → Select email template based on registration.type
+  → Generate QR code SVG (client-side via qrcode-generator)
   → Replace template variables in HTML
-  → env.EMAIL.send({ to, from, subject, html })
+  → POST to Resend API
+  → Return 200 to user
 ```
 
-**Cloudflare Email Service binding usage:**
+**Resend API usage:**
 ```ts
-await env.EMAIL.send({
-  to: [{ email: registrant.email, name: registrant.full_name_th }],
-  from: { email: 'noreply@yourdomain.com', name: 'Tournament System' },
-  subject: `[${tournament.name}] QR Code สำหรับเช็คอิน`,
-  html: renderedHtml,
-})
+const response = await fetch('https://api.resend.com/emails', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    from: 'noreply@yourdomain.com',
+    to: registrant.email,
+    subject: `[${tournament.name}] QR Code สำหรับเช็คอิน`,
+    html: renderedHtml,
+  }),
+});
 ```
 
-> **Note:** Cloudflare Email Service is in public beta as of May 2026. If binding is unavailable, fall back to **Resend** (`fetch('https://api.resend.com/emails', ...)`) using a secret stored in Workers Secrets.
+**Email templates**: Stored in `lib/email-templates/`. Each template function accepts variables and returns HTML. QR code embedded as inline SVG (no R2 upload needed).
 
 ---
 
@@ -411,71 +399,48 @@ await env.EMAIL.send({
 ### 1. Tournament CRUD (Super Admin)
 
 - Create/edit/delete tournaments
-- Fields: name, slug (auto-from name, editable), photo (→ R2), registration limit, open/close dates for registration + check-in, custom email template HTML
-- Passwords (assistant / admin / super_admin) set per tournament — stored as bcrypt hashes
+- Fields: name, slug (auto-generated from name, editable), photo (→ R2), registration limit, per-type limits, open/close dates for registration + check-in, email templates per form, form URL mappings, test mode
+- Passwords (assistant / admin / super_admin) set per tournament — stored as PBKDF2 hashes
 - Slug is the primary key for all public URLs
+- Form configs: Map form IDs to URL slugs via `form_urls_json` (e.g., `{ "youth": "youth-comp", "attendee": "spectator" }`)
 
-### 2. Public Registration — Competitor (`/[slug]/register/competitor`)
+### 2. Dynamic Registration Forms (`/[slug]/register/:type`)
 
-Multi-step form (3 steps, progress indicator):
+Forms are defined in `lib/form-configs/` with TypeScript config. Each form has:
+- `id`: Unique identifier (e.g., 'youth', 'attendee')
+- `label`: { th, en } display names
+- `defaultUrlSlug`: Default URL slug for this form
+- `steps`: Array of step configs with fields
+- `emailField`: Key of field containing email address
 
-**Step 1 — ข้อมูลส่วนตัว**
-- เพศ — radio: ชาย / หญิง
-- ชื่อ-นามสกุล (ไทย), Full Name (English) — text
-- ชื่อเล่น (ไทย), Nickname (English) — text
-- อายุ, ชั้นปีการศึกษา, โรงเรียน — text
-- หมายเลขโทรศัพท์ — tel; อีเมล — email *(QR destination)*
-- มีประสบการณ์เล่นกอล์ฟมาแล้วกี่ปี — text
-- เลือกวันที่ — radio group (5 options)
-- ต้องการรับใบประกาศนียบัตร — radio Yes/No
+**Field types**: `text`, `email`, `tel`, `date`, `number`, `select`, `multiselect`, `radio`, `checkbox`, `file`, `textarea`, `url`
 
-**Step 2 — Beat the Pro**
-- รูปถ่ายผู้สมัคร — file (1–2 images ≤5MB each; note: ถ่ายภายใน 6 เดือน)
-- คลิปแนะนำตัว — file (video 60–120 วินาที ≤100MB)
-- วิดีโอสวิงกอล์ฟ — file (video ≤3 นาที ≤100MB)
-- ผลการแข่งขัน 1/2/3 — textarea
-- แนบผลคะแนนอย่างเป็นทางการ — file upload
-- All files: presign R2 URL → upload direct → store key
+**Example built-in forms**:
+- **youth**: Multi-step form with personal info, Beat the Pro (photos, videos), PDPA
+- **attendee**: Simple spectator/attendee form
 
-**Step 3 — PDPA Consent**
-- 6 consent items (radio ยินยอม/ไม่ยินยอม each)
-- Privacy Policy checkbox (required)
+**Form URL mapping**: `tournament.form_urls_json` stores custom URL slugs per form ID. Format: `{ "formId": "url-slug" }`
 
 On submit:
-1. Validate all fields; check registration window + limit (D1 query)
-2. POST to `/api/register/[slug]/competitor`
-3. Worker: insert to D1, enqueue email job
-4. Redirect to `/[slug]/register/success?id={id}` — show QR code (fetch from R2 after email worker generates it, or generate inline)
-
-### 3. Public Registration — Attendee (`/[slug]/register/attendee`)
-
-2-step form:
-
-**Step 1 — ข้อมูลส่วนตัว**
-- เพศ — radio; ชื่อ-นามสกุล (TH/EN); ชื่อเล่น (TH/EN)
-- อายุ; หมายเลขโทรศัพท์; อีเมล
-- หน่วยงาน / องค์กร — text
-- วันที่ต้องการเข้าร่วม — select/radio
-- ต้องการรับใบประกาศนียบัตร — radio Yes/No
-
-**Step 2 — PDPA Consent** (same as competitor)
-
-On submit: same validation + D1 insert + email queue flow
+1. Validate all fields against form config; check registration window + limit (D1 query)
+2. POST to `/api/register/[slug]/form` with `{ formId, data: { [key]: value } }`
+3. Worker: insert to D1, generate QR code, send email directly via Resend API
+4. Redirect to `/[slug]/register/success?id={id}` — show QR code (generated client-side with `qrcode-generator`)
 
 ### 4. Admin Dashboard (`/admin/[slug]`)
 
 **Stats Panel (real-time)**
-- Competitor registered / checked-in
-- Attendee registered / checked-in
+- Registered/checked-in counts per form type (dynamic based on forms configured)
 - Total progress bar
 - Live via WebSocket → Durable Object
 
 **Registrant Table**
-- Columns: ชื่อ, ประเภท, อีเมล, วันที่สมัคร, สถานะ Check-in, checked_in_at
-- Filters: ประเภท, สถานะ, วันที่
-- Search: ชื่อ / เบอร์โทร
-- Paginated API: `/api/admin/[slug]/registrants?page=1&type=competitor&checked_in=false`
+- Columns: Dynamic based on form config (name, email, form type, submitted_at, checked_in, checked_in_at)
+- Filters: Form type, check-in status, date range
+- Search: Name / phone / email
+- Paginated API: `/api/admin/[slug]/registrants?page=1&type=youth&checked_in=false`
 - Row click: modal with full `data_json` rendered as readable form
+- Delete registration (super_admin only)
 - Export CSV (super_admin only)
 
 **Live Check-in Feed**
@@ -501,45 +466,54 @@ On submit: same validation + D1 insert + email queue flow
 ```ts
 // GET /api/admin/[slug]/export
 // Returns: attachment; filename="[slug]-registrants-YYYY-MM-DD.csv"
-// Columns:
-// id, type, full_name_th, full_name_en, nickname_th, gender, age,
-// school_or_org, phone, email, preferred_date, want_certificate,
-// consent_personal_id, consent_contact_info, consent_photo_video,
-// consent_third_party, consent_international_transfer,
-// consent_data_retention, acknowledge_privacy_policy,
-// submitted_at, checked_in, checked_in_at, checked_in_by
+// Columns are dynamic based on form config fields + system fields:
+// id, type, email, [form fields...], submitted_at, checked_in, checked_in_at, checked_in_by
 ```
 
 ---
 
 ## Email Template System
 
-Each tournament stores a raw `email_template_html` string. At send time, the Queue consumer Worker performs simple string replacement:
+Each tournament stores `email_templates_json`: `{ "formId": "<html_body>" }` mapping per form type.
+
+Email templates are defined in `lib/email-templates/` with named functions returning HTML:
+- `getYouthEmailTemplate(vars)`: For youth competition form
+- `getAttendeeEmailTemplate(vars)`: For attendee form
+- `getCompetitorEmailTemplate(vars)`: For competitor form (deprecated)
+
+**Template variables**:
 
 | Variable | Value |
 |---|---|
-| `{{registrant_name}}` | full_name_th |
+| `{{registrant_name}}` | Full name from form |
 | `{{tournament_name}}` | tournament.name |
-| `{{registration_type}}` | ผู้เข้าแข่งขัน / ผู้เข้าร่วมงาน |
+| `{{registration_type}}` | Form label (TH) |
 | `{{preferred_date}}` | Selected date label |
 | `{{checkin_open_date}}` | Formatted in Asia/Bangkok TZ |
 | `{{checkin_close_date}}` | Formatted in Asia/Bangkok TZ |
-| `{{qr_code_image}}` | `<img src="https://files.yourdomain.com/qrcodes/{id}.png">` |
+| `{{qr_code_image}}` | SVG QR code inline (generated by `qrcode-generator`) |
 | `{{submission_id}}` | registration.id |
 
-Super Admin edits template in tournament settings via `<textarea>` with a "Preview" button.
+**Email sending flow** (no queues):
+1. After registration insert, Worker generates QR code SVG inline
+2. Worker selects email template based on `registration.type`
+3. Worker sends email via Resend API: `fetch('https://api.resend.com/emails', ...)`
+
+Super Admin can override templates in tournament settings per form type.
 
 ---
 
 ## Validation & Edge Cases
 
 - Registration outside window → Thai error message: "การลงทะเบียนยังไม่เปิด / ปิดแล้ว"
-- Limit reached → "ขออภัย ที่นั่งเต็มแล้ว"
-- Duplicate email → allow (same person, different day)
+- Limit reached → "ขออภัย ที่นั่งเต็มแล้ว" (checks `registration_limit`, `competitor_limit`, `attendee_limit`)
+- Duplicate email → allow (same person can register for different forms/days)
 - File size exceeded → validate client-side before presign request (photos ≤5MB, videos ≤100MB)
-- QR token is UUID v4, never in URL params, only in QR image
+- Test mode → if `tournament.test_mode = true`, allows registration outside window for testing
+- QR token is UUID v4, never in URL params, only in QR code
 - All timestamps: stored as Unix epoch integers in D1 (SQLite has no native timestamp); display in `Asia/Bangkok` TZ using `Intl.DateTimeFormat`
 - D1 concurrent write for check-in: use `UPDATE ... WHERE checked_in = 0` to prevent double check-in race
+- Form validation → validates against `FormConfig` schema (required fields, types, options)
 
 ---
 
@@ -547,47 +521,90 @@ Super Admin edits template in tournament settings via `<textarea>` with a "Previ
 
 ```
 /app
-  /[slug]
-    /register
-      /competitor/page.tsx
-      /attendee/page.tsx
-      /success/page.tsx
-  /admin
-    /page.tsx
-    /[slug]
-      /page.tsx
-      /settings/page.tsx
-      /checkin/page.tsx
+  /routes.ts                — React Router route config
+  /routes/
+    /home.tsx                — Tournament homepage
+    /register/
+      register.tsx           — Dynamic form renderer
+      success.tsx            — Success page with QR code
+    /admin/
+      index.tsx              — Tournament list
+      dashboard.tsx          — Admin dashboard
+      settings.tsx           — Tournament settings
+      checkin.tsx            — QR scanner
+    /api/
+      /auth.ts               — Password verification
+      /logout.ts             — Session clear
+      /upload.ts             — R2 presign URL generation
+      /file.ts               — R2 file proxy
+      /checkin.ts            — QR check-in endpoint
+      /ws.ts                 — WebSocket upgrade to DO
+      /register-form.ts      — Dynamic form config API
+      /register-competitor.ts — Legacy competitor submit
+      /register-attendee.ts   — Legacy attendee submit
+      /admin/
+        tournaments.ts       — CRUD tournaments
+        registrants.ts        — List/filter/registrants
+        registrant-delete.ts  — Delete registration
+        stats.ts              — Statistics
+        export.ts             — CSV export
+        tournament.ts         — Update single tournament
 /workers
+  /app.ts                   — Main Worker entry, exports TournamentRoom
   /tournament-room.ts       — Durable Object class
-  /email-consumer.ts        — Queue consumer for email sending
+  /email-consumer.ts        — Email queue consumer (NOT USED - emails sent directly)
 /lib
-  /db.ts                    — Drizzle D1 client
+  /db/
+    index.ts                — Drizzle D1 client factory
+    schema.ts               — D1 schema definitions
   /r2.ts                    — R2 helpers (presign, get URL)
   /kv-session.ts            — KV session create/verify/destroy
-  /email.ts                 — Email Service binding wrapper
-  /qrcode.ts                — QR PNG generation
+  /email.ts                 — Email sending (Resend API wrapper)
+  /qrcode.ts                — QR SVG generation
   /csv.ts                   — CSV stream builder
-  /auth.ts                  — bcrypt password verify
+  /auth.ts                  — PBKDF2 password verify (Web Crypto API)
   /realtime.ts              — DO room broadcast helper
+  /utils.ts                 — Utility functions
+  /form-configs/            — Dynamic form definitions
+    /index.ts                — Form config registry
+    /attendee-dynamic.ts     — Attendee form config
+    /youth.ts                — Youth competition form config
+    /shared-options.ts       — Shared field options (provinces, etc.)
+    /thai-provinces.ts       — Thai provinces data
+  /email-templates/          — Email templates
+    /index.ts                — Template registry
+    /attendee.ts             — Attendee email template
+    /youth.ts                — Youth email template
+    /competitor.ts           — Competitor email template (deprecated)
 /components
-  /forms
-    CompetitorForm.tsx
-    AttendeeForm.tsx
-    PDPASection.tsx
-    FileUploadField.tsx      — handles presign → direct R2 upload
-  /admin
-    StatsPanel.tsx
-    RegistrantTable.tsx
-    CheckinFeed.tsx          — WebSocket consumer
-    QRScanner.tsx
-  /ui                        — shadcn components
+  /forms/
+    DynamicForm.tsx          — Form renderer from config
+    FileUploadField.tsx      — R2 upload with presign
+  /admin/
+    StatsPanel.tsx           — Real-time stats
+    RegistrantTable.tsx      — Registrant list with filters
+    CheckinFeed.tsx          — WebSocket live feed
+    QRScanner.tsx            — QR code scanner
+  /ui                        — UI components (shadcn primitives)
 /types
-  bindings.d.ts              — Env interface (DB, BUCKET, SESSIONS, TOURNAMENT_ROOM, EMAIL_QUEUE, EMAIL)
-  tournament.ts
-  registration.ts
-wrangler.jsonc
+  bindings.d.ts              — Env interface (DB, BUCKET, SESSIONS, TOURNAMENT_ROOM, EMAIL_QUEUE)
+  form-config.ts            — Form config TypeScript types
+  registration.ts           — Registration data types
+  tournament.ts             — Tournament data types
+/drizzle/
+  /0001_initial.sql          — Initial schema
+  /0002_registration_urls.sql
+  /0003_type_limits.sql
+  /0004_registration_titles.sql
+  /0005_flexible_forms.sql   — Dynamic forms support
+  /0006_registration_titles_en.sql
+  /0007_remove_default_form_id.sql
+  /0008_test_mode.sql
+  /0009_email_templates.sql   — Per-form email templates
+  /0010_registration_type_forms.sql
+wrangler.json
 drizzle.config.ts
+react-router.config.ts
 ```
 
 ---
@@ -595,26 +612,32 @@ drizzle.config.ts
 ## Local Development
 
 ```bash
-# 1. Install
-npm create cloudflare@latest -- tournament-app --framework=next --platform=workers
+# 1. Dev server (React Router + Wrangler)
+npm run dev
 
-# 2. Create services
+# Or with Wrangler directly
+wrangler dev
+
+# 2. Create Cloudflare services (first time setup)
 wrangler d1 create tournament-db
 wrangler r2 bucket create tournament-uploads
 wrangler kv namespace create SESSIONS
 wrangler queues create send-qr-email
 
-# 3. Apply D1 schema
-wrangler d1 execute tournament-db --local --file=./drizzle/schema.sql
+# 3. Apply D1 migrations locally
+# IMPORTANT: After adding/modifying .sql files, always run:
+wrangler d1 execute tournament-db --local --file=drizzle/<filename>.sql
+
+# Or apply all migrations:
+for file in drizzle/*.sql; do wrangler d1 execute tournament-db --local --file="$file"; done
 
 # 4. Set secrets (local via .dev.vars)
 # .dev.vars (gitignored):
-# BCRYPT_SEED_SECRET=...
-# RESEND_API_KEY=...  (email fallback)
-
-# 5. Dev server (emulates all bindings via Miniflare)
-wrangler dev
+# RESEND_API_KEY=re_...
+# SUPER_ADMIN_PASSWORD=...
 ```
+
+**See `CLAUDE.md` for migration rule:** Always run local migrate after modifying `.sql` files.
 
 ---
 
@@ -622,24 +645,33 @@ wrangler dev
 
 ```bash
 # Production deploy
+npm run deploy
+# or
 wrangler deploy
 
 # Set production secrets
 wrangler secret put RESEND_API_KEY
+wrangler secret put SUPER_ADMIN_PASSWORD
 
-# Run D1 migration in production
-wrangler d1 execute tournament-db --remote --file=./drizzle/schema.sql
+# Run D1 migrations in production
+for file in drizzle/*.sql; do wrangler d1 execute tournament-db --remote --file="$file"; done
 ```
 
 ---
 
 ## Implementation Notes
 
-1. **`@opennextjs/cloudflare`**: All Next.js Server Actions, API Routes, and RSC run as Workers. Access D1/R2/KV/DO via `getRequestContext().env` from `@opennextjs/cloudflare`.
-2. **bcrypt in Workers**: Use `bcryptjs` (pure JS, no native addons) — compatible with Workers' Node.js compat layer.
-3. **QR PNG generation**: `qrcode` package works in Workers with `nodejs_compat` flag. Generate buffer, upload to R2 as `image/png`.
-4. **WebSocket on client**: Use native browser `WebSocket` pointing to `/api/ws/[slug]`. Include session cookie automatically.
-5. **D1 check-in atomicity**: `UPDATE registrations SET checked_in=1, checked_in_at=? WHERE qr_code_token=? AND checked_in=0` — returns `meta.changes` to detect race conditions.
-6. **R2 presigned URLs**: Valid for 1 hour. Generate server-side in `/api/upload/presign` route, return to client, client uploads directly. This keeps large video files off Workers' CPU limits.
-7. **DO hibernation**: Use `state.acceptWebSocket()` (not manual WebSocket pair management) to enable hibernation — Durable Object sleeps when all admins disconnect, costing nothing.
-8. **Thai timezone**: `new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })` for display. Store raw UTC epoch in D1.
+1. **React Router 7 on Workers**: Access Cloudflare bindings via `context.cloudflare.env` in loaders and actions. The `workers/app.ts` file exports the main Worker handler and the `TournamentRoom` Durable Object class.
+2. **Password hashing**: Uses Web Crypto API PBKDF2 (`lib/auth.ts`) — no bcrypt dependency. Hash format: `iterations$saltHex$hashHex`. Fully compatible with Workers runtime.
+3. **QR Code generation**: `qrcode-generator` package generates SVG QR codes on client-side. SVG embedded directly in email HTML — no R2 upload needed.
+4. **Email sending**: Sends directly via Resend API (`fetch('https://api.resend.com/emails', ...)`) after registration. No queue consumer — email sent synchronously (but fast due to API call).
+5. **Dynamic forms**: Form configs are TypeScript objects in `lib/form-configs/`. The form renderer (`components/forms/DynamicForm.tsx`) builds UI from config at runtime.
+6. **WebSocket on client**: Use native browser `WebSocket` pointing to `/api/ws/[slug]`. Session cookie included automatically.
+7. **D1 check-in atomicity**: `UPDATE registrations SET checked_in=1, checked_in_at=? WHERE qr_code_token=? AND checked_in=0` — returns `meta.changes` to detect race conditions.
+8. **R2 presigned URLs**: Valid for 1 hour. Generate server-side in `/api/upload` route, return to client, client uploads directly. Keeps large video files off Workers' CPU limits.
+9. **DO hibernation**: Use `state.acceptWebSocket()` to enable hibernation — Durable Object sleeps when all admins disconnect, costing nothing.
+10. **Thai timezone**: `new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })` for display. Store raw UTC epoch in D1.
+11. **Type limits**: Tournaments support per-type limits (`competitor_limit`, `attendee_limit`) in addition to overall `registration_limit`.
+12. **Test mode**: When `test_mode = true`, registration window validation is bypassed — useful for testing without changing dates.
+13. **Migration rule**: ALWAYS run `npx wrangler d1 execute tournament-db --local --file=drizzle/<filename>.sql` after modifying `.sql` files (documented in `CLAUDE.md`).
+14. **UI components**: Uses daisyui with Tailwind CSS for styling. Design system follows `DESIGN.md` (Anthropic-inspired warm cream + coral aesthetic).

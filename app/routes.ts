@@ -16,6 +16,7 @@ export default [
 	route("api/auth/logout", "routes/api/logout.ts"),
 	route("api/register/:slug/competitor", "routes/api/register-competitor.ts"),
 	route("api/register/:slug/attendee", "routes/api/register-attendee.ts"),
+	route("api/register/:slug/form", "routes/api/register-form.ts"),
 	route("api/checkin/:slug", "routes/api/checkin.ts"),
 	route("api/upload", "routes/api/upload.ts"),
 	route("api/file", "routes/api/file.ts"),
@@ -27,6 +28,7 @@ export default [
 	route("api/admin/:slug/stats", "routes/api/admin/stats.ts"),
 	route("api/admin/:slug/export", "routes/api/admin/export.ts"),
 	route("api/admin/:slug/tournament", "routes/api/admin/tournament.ts"),
+	route("api/admin/:slug/registrants/:id", "routes/api/admin/registrant-delete.ts"),
 
 	// Admin pages
 	route("admin", "routes/admin/index.tsx"),

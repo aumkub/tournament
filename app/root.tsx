@@ -6,6 +6,7 @@ import {
 	Scripts,
 	ScrollRestoration,
 	useRouteLoaderData,
+	useLocation,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -31,14 +32,25 @@ export const links: Route.LinksFunction = () => [
 export async function loader({ request, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
 	const token = parseCookie(request.headers.get("Cookie"));
-	let authenticated = false;
 
-	if (token) {
-		const session = await verifySession(env.SESSIONS, token);
-		authenticated = !!session;
+	if (!token) return { authenticated: false, role: null, backendUrl: null };
+
+	const session = await verifySession(env.SESSIONS, token);
+	if (!session) return { authenticated: false, role: null, backendUrl: null };
+
+	let backendUrl = "/admin";
+	if (session.role !== "super_admin" && session.tournamentId) {
+		const t = await env.DB.prepare("SELECT slug FROM tournaments WHERE id = ?")
+			.bind(session.tournamentId)
+			.first();
+		if (t) {
+			backendUrl = session.role === "assistant"
+				? `/admin/${t.slug}/checkin`
+				: `/admin/${t.slug}`;
+		}
 	}
 
-	return { authenticated };
+	return { authenticated: true, role: session.role, backendUrl };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -51,7 +63,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Links />
 			</head>
 			<body style={{ margin: 0, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-				<Header />
 				<div style={{ flex: 1 }}>
 					{children}
 				</div>
@@ -63,7 +74,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-	return <Outlet />;
+	const { pathname } = useLocation();
+	const hideHeader = /\/register\//.test(pathname) || pathname.startsWith("/admin");
+	return (
+		<>
+			{!hideHeader && <Header />}
+			<Outlet />
+		</>
+	);
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

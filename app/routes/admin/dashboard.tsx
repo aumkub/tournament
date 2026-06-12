@@ -3,13 +3,8 @@ import { parseCookie, verifySession, hasRole } from "../../../lib/kv-session";
 import { StatsPanel } from "../../../components/admin/StatsPanel";
 import { RegistrantTable } from "../../../components/admin/RegistrantTable";
 import { CheckinFeed } from "../../../components/admin/CheckinFeed";
-import {
-	IconArrowLeft,
-	IconQrCode,
-	IconSettings,
-	IconDownload,
-	IconLogOut,
-} from "../../../components/ui/icons";
+import { AdminNav } from "../../../components/admin/AdminNav";
+import { FORM_CONFIGS } from "../../../lib/form-configs/index";
 import type { Role } from "../../../types/registration";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
@@ -24,7 +19,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 	}
 
 	const tournament = await env.DB.prepare(
-		"SELECT id, name, slug FROM tournaments WHERE slug = ?",
+		"SELECT id, name, slug, form_urls_json, competitor_url, attendee_url, competitor_title, attendee_title, competitor_title_en, attendee_title_en FROM tournaments WHERE slug = ?",
 	)
 		.bind(slug)
 		.first();
@@ -33,11 +28,46 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 		throw new Response("Tournament not found", { status: 404 });
 	}
 
+	let formUrls: Record<string, string> = {};
+	try { formUrls = JSON.parse((tournament.form_urls_json as string) || "{}"); } catch { /* ignore */ }
+
+	const previewLinks: { label: string; href: string }[] = [];
+	for (const [formId, urlSlug] of Object.entries(formUrls)) {
+		const cfg = FORM_CONFIGS[formId];
+		previewLinks.push({
+			label: cfg?.label.th || formId,
+			href: `/${slug}/register/${urlSlug}`,
+		});
+	}
+	// Build typeLabels for RegistrantTable — tournament-specific label overrides
+	const typeLabels: Record<string, string> = {};
+	for (const [formId] of Object.entries(formUrls)) {
+		// dynamic forms already resolved via FORM_CONFIGS in client, skip
+		void formId;
+	}
+	const compTitle = (tournament.competitor_title as string) || "";
+	const attTitle = (tournament.attendee_title as string) || "";
+	const compTitleEn = (tournament.competitor_title_en as string) || "";
+	const attTitleEn = (tournament.attendee_title_en as string) || "";
+	const compLabel = [compTitle, compTitleEn].filter(Boolean).join(" / ") || "ผู้เข้าแข่งขัน";
+	const attLabel = [attTitle, attTitleEn].filter(Boolean).join(" / ") || "ผู้เข้าร่วมงาน";
+	typeLabels["competitor"] = compLabel;
+	typeLabels["attendee"] = attLabel;
+
+	if (previewLinks.length === 0) {
+		const compUrl = (tournament.competitor_url as string) || "competitor";
+		const attUrl = (tournament.attendee_url as string) || "attendee";
+		previewLinks.push({ label: compLabel, href: `/${slug}/register/${compUrl}` });
+		previewLinks.push({ label: attLabel, href: `/${slug}/register/${attUrl}` });
+	}
+
 	return {
 		id: tournament.id as string,
 		name: tournament.name as string,
 		slug: tournament.slug as string,
 		role: session.role as Role,
+		previewLinks,
+		typeLabels,
 	};
 }
 
@@ -46,43 +76,34 @@ export function meta({ data }: Route.MetaArgs) {
 }
 
 export default function DashboardPage({ loaderData }: Route.ComponentProps) {
-	const isSuperAdmin = loaderData.role === "super_admin";
-
 	return (
+		<>
+			<AdminNav slug={loaderData.slug} name={loaderData.name} role={loaderData.role} current="dashboard" />
 		<div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--spacing-lg)" }}>
 			{/* Header */}
-			<div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "var(--spacing-md)", marginBottom: "var(--spacing-xl)" }}>
+			<div style={{ marginBottom: "var(--spacing-xl)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--spacing-md)", flexWrap: "wrap" }}>
 				<div>
 					<h1 style={{ fontSize: "clamp(22px, 4vw, 28px)", marginBottom: 4 }}>{loaderData.name}</h1>
 					<p style={{ fontSize: 14, color: "var(--color-muted)", margin: 0 }}>slug: {loaderData.slug}</p>
 				</div>
 				<div style={{ display: "flex", gap: "var(--spacing-sm)", flexWrap: "wrap" }}>
-					<a href="/admin" className="btn btn-ghost btn-sm">
-						<IconArrowLeft size={16} /> กลับรายการ
-					</a>
-					<a href={`/admin/${loaderData.slug}/checkin`} className="btn btn-secondary">
-						<IconQrCode size={16} /> QR Scanner
-					</a>
-					{isSuperAdmin ? (
-						<a href={`/admin/${loaderData.slug}/settings`} className="btn btn-secondary">
-							<IconSettings size={16} /> Settings
-						</a>
-					) : (
-						<button
-							className="btn btn-secondary"
-							onClick={async () => {
-								await fetch("/api/auth/logout", { method: "POST" });
-								window.location.href = "/admin";
-							}}
+					{loaderData.previewLinks.map((link) => (
+						<a
+							key={link.href}
+							href={link.href}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="btn btn-sm btn-ghost"
+							style={{ textDecoration: "none", fontSize: 13, gap: 4 }}
 						>
-							<IconLogOut size={16} /> ออกจากระบบ
-						</button>
-					)}
-					{isSuperAdmin && (
-						<a href={`/api/admin/${loaderData.slug}/export`} className="btn btn-primary">
-							<IconDownload size={16} /> Export CSV
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+								<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+								<polyline points="15 3 21 3 21 9"/>
+								<line x1="10" y1="14" x2="21" y2="3"/>
+							</svg>
+							{link.label}
 						</a>
-					)}
+					))}
 				</div>
 			</div>
 
@@ -95,12 +116,13 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 			<div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--spacing-lg)" }} className="md:grid-cols-[1fr_320px]">
 				<div>
 					<h2 style={{ fontSize: 20, marginBottom: "var(--spacing-lg)" }}>รายชื่อผู้ลงทะเบียน</h2>
-					<RegistrantTable slug={loaderData.slug} />
+					<RegistrantTable slug={loaderData.slug} typeLabels={loaderData.typeLabels} role={loaderData.role} />
 				</div>
 				<div>
 					<CheckinFeed slug={loaderData.slug} />
 				</div>
 			</div>
 		</div>
+		</>
 	);
 }

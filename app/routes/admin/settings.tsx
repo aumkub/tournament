@@ -1,9 +1,9 @@
 import type { Route } from "./+types/admin/settings";
 import { parseCookie, verifySession, hasRole } from "../../../lib/kv-session";
-import { DEFAULT_EMAIL_BODY } from "../../../lib/email";
+import { FORM_CONFIGS } from "../../../lib/form-configs/index";
+import { getDefaultEmailTemplate, EMAIL_TEMPLATE_LABELS, EMAIL_TEMPLATE_VARS } from "../../../lib/email-templates/index";
 import { useState, useRef, useMemo } from "react";
 import {
-	IconArrowLeft,
 	IconSave,
 	IconCheck,
 	IconX,
@@ -20,6 +20,7 @@ import {
 	IconUser,
 	IconUsers,
 } from "../../../components/ui/icons";
+import { AdminNav } from "../../../components/admin/AdminNav";
 
 type Tab = "general" | "schedule" | "registration" | "passwords" | "email";
 
@@ -62,10 +63,10 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 	const [activeTab, setActiveTab] = useState<Tab>("general");
 	const [coverPreview, setCoverPreview] = useState<string | null>(loaderData.coverPhotoUrl);
 	const [coverFile, setCoverFile] = useState<File | null>(null);
-	const [emailView, setEmailView] = useState<"edit" | "preview">("edit");
 
 	const [form, setForm] = useState({
 		name: t.name || "",
+		slug: t.slug || "",
 		registration_limit: t.registration_limit || "",
 		competitor_limit: t.competitor_limit || "",
 		attendee_limit: t.attendee_limit || "",
@@ -73,30 +74,62 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 		registration_close_at: t.registration_close_at ? new Date(t.registration_close_at).toISOString().slice(0, 16) : "",
 		checkin_open_at: t.checkin_open_at ? new Date(t.checkin_open_at).toISOString().slice(0, 16) : "",
 		checkin_close_at: t.checkin_close_at ? new Date(t.checkin_close_at).toISOString().slice(0, 16) : "",
-		email_template_html: t.email_template_html || "",
 		competitor_url: t.competitor_url || "competitor",
 		attendee_url: t.attendee_url || "attendee",
+		competitor_title: t.competitor_title || "",
+		attendee_title: t.attendee_title || "",
+		competitor_title_en: t.competitor_title_en || "",
+		attendee_title_en: t.attendee_title_en || "",
 		passwords: { assistant: "", admin: "", super_admin: "" },
 	});
 
-	const previewSrcDoc = useMemo(() => {
-		const bodyHtml = form.email_template_html.trim() || DEFAULT_EMAIL_BODY;
-		let rendered = bodyHtml;
-		const sampleVars: Record<string, string> = {
+	// Dynamic form config state
+	const [competitorFormId, setCompetitorFormId] = useState<string>(t.competitor_form_id || "");
+	const [attendeeFormId, setAttendeeFormId] = useState<string>(t.attendee_form_id || "");
+	const [testMode, setTestMode] = useState<boolean>(!!t.test_mode);
+	const [emailTemplates, setEmailTemplates] = useState<Record<string, string>>(() => {
+		try { return JSON.parse(t.email_templates_json || "{}"); } catch { return {}; }
+	});
+	const [activeEmailType, setActiveEmailType] = useState<string>("attendee");
+	const [emailView, setEmailView] = useState<"edit" | "preview">("edit");
+
+	const emailFormTypes = Object.keys(FORM_CONFIGS);
+
+	const SAMPLE_VARS: Record<string, Record<string, string>> = {
+		attendee: {
 			registrant_name: "สมชาย ใจดี",
 			tournament_name: t.name || "Tournament Name",
-			registration_type: "ผู้เข้าแข่งขัน",
-			preferred_date: "วันเสาร์ที่ 15 มีนาคม 2568",
+			registration_type: "ผู้ชม",
+			attendance_days: "วันเสาร์, วันอาทิตย์",
 			checkin_open_date: "15 มี.ค. 68, 08:00",
 			checkin_close_date: "15 มี.ค. 68, 17:00",
 			qr_code_image: '<div style="width:200px;height:200px;background:#f0f0f0;border:2px dashed #ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;margin:0 auto;">QR Code Preview</div>',
 			submission_id: "preview-000-000",
+		},
+		youth: {
+			registrant_name: "พ่อแม่ผู้ปกครอง",
+			tournament_name: t.name || "Tournament Name",
+			registration_type: "เยาวชน",
+			child_name: "น้องกอล์ฟ",
+			youth_path_label: "ทั่วไป (Path A)",
+			checkin_open_date: "15 มี.ค. 68, 08:00",
+			checkin_close_date: "15 มี.ค. 68, 17:00",
+			qr_code_image: '<div style="width:200px;height:200px;background:#f0f0f0;border:2px dashed #ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;margin:0 auto;">QR Code Preview</div>',
+			submission_id: "preview-000-000",
+		},
+	};
+
+	const buildPreview = useMemo(() => {
+		return (type: string) => {
+			const bodyHtml = emailTemplates[type] || getDefaultEmailTemplate(type);
+			let rendered = bodyHtml;
+			const vars = SAMPLE_VARS[type] || SAMPLE_VARS["attendee"];
+			for (const [key, value] of Object.entries(vars)) {
+				rendered = rendered.replaceAll("{{" + key + "}}", value);
+			}
+			return "<!DOCTYPE html><html lang=\"th\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body style=\"margin:0;padding:0;background:#f5f0e8;font-family:sans-serif;font-size:16px;line-height:1.7;\">" + rendered + "</body></html>";
 		};
-		for (const [key, value] of Object.entries(sampleVars)) {
-			rendered = rendered.replaceAll("{{" + key + "}}", value);
-		}
-		return "<!DOCTYPE html><html lang=\"th\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body style=\"margin:0;padding:0;background:#f5f0e8;font-family:sans-serif;font-size:16px;line-height:1.7;\">" + rendered + "</body></html>";
-	}, [form.email_template_html, t.name]);
+	}, [emailTemplates, t.name]);
 
 	const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -118,6 +151,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 		try {
 			const fd = new FormData();
 			fd.append("name", form.name);
+			fd.append("slug", form.slug);
 			fd.append("registration_limit", form.registration_limit || "");
 			fd.append("competitor_limit", form.competitor_limit || "");
 			fd.append("attendee_limit", form.attendee_limit || "");
@@ -125,10 +159,17 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			if (form.registration_close_at) fd.append("registration_close_at", form.registration_close_at);
 			if (form.checkin_open_at) fd.append("checkin_open_at", form.checkin_open_at);
 			if (form.checkin_close_at) fd.append("checkin_close_at", form.checkin_close_at);
-			fd.append("email_template_html", form.email_template_html);
+			fd.append("email_templates_json", JSON.stringify(emailTemplates));
 			fd.append("competitor_url", form.competitor_url);
 			fd.append("attendee_url", form.attendee_url);
+			fd.append("competitor_title", form.competitor_title);
+			fd.append("attendee_title", form.attendee_title);
+			fd.append("competitor_title_en", form.competitor_title_en);
+			fd.append("attendee_title_en", form.attendee_title_en);
 			if (coverFile) fd.append("cover_photo", coverFile);
+			fd.append("competitor_form_id", competitorFormId);
+			fd.append("attendee_form_id", attendeeFormId);
+			fd.append("test_mode", testMode ? "1" : "0");
 			if (form.passwords.assistant) fd.append("password_assistant", form.passwords.assistant);
 			if (form.passwords.admin) fd.append("password_admin", form.passwords.admin);
 			if (form.passwords.super_admin) fd.append("password_super_admin", form.passwords.super_admin);
@@ -140,6 +181,9 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			}
 			setCoverFile(null);
 			setMessage({ ok: true, text: "บันทึกสำเร็จ" });
+			if (form.slug && form.slug !== t.slug) {
+				window.location.href = `/admin/${form.slug}/settings`;
+			}
 		} catch (err: any) {
 			setMessage({ ok: false, text: err.message });
 		} finally {
@@ -150,21 +194,18 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 	const tabs: { id: Tab; label: string; icon: any }[] = [
 		{ id: "general", label: "ทั่วไป", icon: <IconSettings size={16} /> },
 		{ id: "schedule", label: "วันเวลา", icon: <IconCalendar size={16} /> },
-		{ id: "registration", label: "ลงทะเบียน", icon: <IconLink size={16} /> },
+		{ id: "registration", label: "ลงทะเบียน & ฟอร์ม", icon: <IconLink size={16} /> },
 		{ id: "passwords", label: "รหัสผ่าน", icon: <IconKey size={16} /> },
 		{ id: "email", label: "อีเมล", icon: <IconMail size={16} /> },
 	];
 
 	return (
+		<>
+		<AdminNav slug={t.slug} name={t.name} role="super_admin" current="settings" />
 		<div style={{ maxWidth: 800, margin: "0 auto", padding: "var(--spacing-lg)" }}>
 			{/* Header */}
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-lg)" }}>
-				<h1 style={{ fontSize: 28, display: "flex", alignItems: "center", gap: 8 }}>
-					<a href={"/admin/" + t.slug} style={{ color: "var(--color-muted)", textDecoration: "none" }}>
-						<IconArrowLeft size={20} />
-					</a>
-					Settings
-				</h1>
+				<h1 style={{ fontSize: 28 }}>Settings</h1>
 				<button className="btn btn-primary" onClick={handleSave} disabled={saving}>
 					<IconSave size={16} /> {saving ? "กำลังบันทึก..." : "บันทึก"}
 				</button>
@@ -264,6 +305,21 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 								<label className="label">ชื่อ</label>
 								<input className="input input-bordered w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
 							</div>
+							<div>
+								<label className="label">Slug (URL)</label>
+								<div style={{ display: "flex", alignItems: "center" }}>
+									<span style={{ padding: "8px 12px", background: "#f5f0e8", border: "1px solid #d5cfc4", borderRight: "none", borderRadius: "var(--radius-md) 0 0 var(--radius-md)", fontSize: 13, color: "var(--color-muted)", whiteSpace: "nowrap" }}>
+										/admin/
+									</span>
+									<input
+										className="input input-bordered"
+										style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }}
+										value={form.slug}
+										onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-") })}
+									/>
+								</div>
+								<p style={{ fontSize: 12, color: "var(--color-muted)", margin: "4px 0 0" }}>เปลี่ยน slug จะ redirect ไปหน้าใหม่อัตโนมัติ</p>
+							</div>
 							<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)", marginBottom: "var(--spacing-lg)" }}>
 								<div>
 									<label className="label">จำกัดจำนวนรวม (ว่าง = ไม่จำกัด)</label>
@@ -310,77 +366,150 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 				</div>
 			)}
 
-			{/* ── Tab: Registration URLs ────────────────── */}
+			{/* ── Tab: Registration & Forms ─────────────── */}
 			{activeTab === "registration" && (
-				<div className="card">
-					<h2 style={{ fontSize: 18, marginBottom: "var(--spacing-sm)" }}>ลิงก์ลงทะเบียน</h2>
-					<p style={{ fontSize: 13, color: "var(--color-muted)", marginBottom: "var(--spacing-lg)", marginTop: 0 }}>
-						แก้ไขชื่อ path หลัง /register/ หรือใส่ URL ภายนอก (เริ่มด้วย https://)
-					</p>
-					<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
-						<div>
-							<label className="label">
-								<span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-									<IconUser size={14} /> ผู้เข้าแข่งขัน (Competitor)
-								</span>
-							</label>
-							<div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-								<span style={{
-									padding: "8px 12px",
-									background: "#f5f0e8",
-									border: "1px solid #d5cfc4",
-									borderRight: "none",
-									borderRadius: "var(--radius-md) 0 0 var(--radius-md)",
-									fontSize: 14,
-									color: "var(--color-muted)",
-									whiteSpace: "nowrap",
-									userSelect: "all",
-								}}>
-									/{t.slug}/register/
-								</span>
-								<input
-									className="input input-bordered"
-									style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }}
-									placeholder="competitor"
-									value={form.competitor_url}
-									onChange={(e) => setForm({ ...form, competitor_url: e.target.value })}
-								/>
+				<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
+
+					{/* ── Test Mode ── */}
+					<div className="card" style={{ borderColor: testMode ? "#f59e0b" : undefined, background: testMode ? "#fffbeb" : undefined }}>
+						<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-md)" }}>
+							<div>
+								<h2 style={{ fontSize: 18, margin: 0 }}>โหมดทดสอบ</h2>
+								<p style={{ fontSize: 13, color: testMode ? "#92400e" : "var(--color-muted)", margin: "4px 0 0" }}>
+									{testMode ? "⚠️ เปิดอยู่ — ปุ่มกรอกข้อมูลอัตโนมัติแสดงในฟอร์มลงทะเบียน" : "ปิดอยู่ — ผู้ใช้จะไม่เห็นปุ่มทดสอบ"}
+								</p>
 							</div>
-							<p style={{ fontSize: 12, color: "var(--color-muted)", margin: "4px 0 0" }}>
-								URL เต็ม: /{t.slug}/register/{form.competitor_url || "competitor"}
-							</p>
+							<label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", flexShrink: 0 }}>
+								<span style={{ fontSize: 13, fontWeight: 500, color: testMode ? "#92400e" : "var(--color-muted)" }}>
+									{testMode ? "เปิด" : "ปิด"}
+								</span>
+								<div
+									onClick={() => setTestMode((v) => !v)}
+									style={{
+										width: 44, height: 24, borderRadius: 12,
+										background: testMode ? "#f59e0b" : "var(--color-border)",
+										position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0,
+									}}
+								>
+									<div style={{
+										position: "absolute", top: 2,
+										left: testMode ? 22 : 2,
+										width: 20, height: 20, borderRadius: "50%",
+										background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+										transition: "left 0.2s",
+									}} />
+								</div>
+							</label>
 						</div>
-						<div style={{ borderTop: "1px solid #e6dfd8", paddingTop: "var(--spacing-lg)" }}>
-							<label className="label">
-								<span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-									<IconUsers size={14} /> ผู้เข้าร่วมงาน (Attendee)
-								</span>
-							</label>
-							<div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-								<span style={{
-									padding: "8px 12px",
-									background: "#f5f0e8",
-									border: "1px solid #d5cfc4",
-									borderRight: "none",
-									borderRadius: "var(--radius-md) 0 0 var(--radius-md)",
-									fontSize: 14,
-									color: "var(--color-muted)",
-									whiteSpace: "nowrap",
-									userSelect: "all",
-								}}>
-									/{t.slug}/register/
-								</span>
-								<input
-									className="input input-bordered"
-									style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }}
-									placeholder="attendee"
-									value={form.attendee_url}
-									onChange={(e) => setForm({ ...form, attendee_url: e.target.value })}
-								/>
+					</div>
+
+					{/* ── ผู้เข้าแข่งขัน card ── */}
+					<div className="card">
+						<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-lg)" }}>
+							<IconUser size={16} />
+							<h2 style={{ fontSize: 18, margin: 0 }}>ผู้เข้าแข่งขัน</h2>
+						</div>
+						<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
+							{/* Slug */}
+							<div>
+								<label className="label">URL Path (slug)</label>
+								<div style={{ display: "flex", alignItems: "center" }}>
+									<span style={{ padding: "8px 12px", background: "#f5f0e8", border: "1px solid #d5cfc4", borderRight: "none", borderRadius: "var(--radius-md) 0 0 var(--radius-md)", fontSize: 13, color: "var(--color-muted)", whiteSpace: "nowrap" }}>
+										/{t.slug}/register/
+									</span>
+									<input className="input input-bordered" style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }} placeholder="competitor" value={form.competitor_url} onChange={(e) => setForm({ ...form, competitor_url: e.target.value })} />
+								</div>
 							</div>
-							<p style={{ fontSize: 12, color: "var(--color-muted)", margin: "4px 0 0" }}>
-								URL เต็ม: /{t.slug}/register/{form.attendee_url || "attendee"}
-							</p>
+							{/* Titles */}
+							<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-sm)" }}>
+								<div>
+									<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (ไทย)</label>
+									<input className="input input-bordered w-full" placeholder="ผู้เข้าแข่งขัน" value={form.competitor_title} onChange={(e) => setForm({ ...form, competitor_title: e.target.value })} />
+								</div>
+								<div>
+									<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (EN)</label>
+									<input className="input input-bordered w-full" placeholder="Competitor" value={form.competitor_title_en} onChange={(e) => setForm({ ...form, competitor_title_en: e.target.value })} />
+								</div>
+							</div>
+							{/* Form select */}
+							<div>
+								<label className="label" style={{ fontSize: 12 }}>ฟอร์ม</label>
+								<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+									{/* Legacy option */}
+									<label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${competitorFormId === "" ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: competitorFormId === "" ? "var(--color-surface-soft)" : "transparent" }}>
+										<input type="radio" name="competitor-form" checked={competitorFormId === ""} onChange={() => setCompetitorFormId("")} style={{ accentColor: "var(--color-primary)" }} />
+										<div>
+											<span style={{ fontWeight: 500, fontSize: 14 }}>ลิงก์เดิม (Legacy)</span>
+											<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>ใช้ฟอร์มลงทะเบียนเดิม</p>
+										</div>
+									</label>
+									{Object.values(FORM_CONFIGS).map((cfg) => (
+										<label key={cfg.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${competitorFormId === cfg.id ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: competitorFormId === cfg.id ? "var(--color-surface-soft)" : "transparent" }}>
+											<input type="radio" name="competitor-form" checked={competitorFormId === cfg.id} onChange={() => setCompetitorFormId(cfg.id)} style={{ accentColor: "var(--color-primary)" }} />
+											<div>
+												<span style={{ fontWeight: 500, fontSize: 14 }}>{cfg.label.th}</span>
+												<span style={{ marginLeft: 6, fontSize: 12, color: "var(--color-muted)" }}>{cfg.label.en}</span>
+												<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>{cfg.steps.length} ขั้นตอน · {cfg.steps.reduce((n, s) => n + s.fields.length, 0)} ฟิลด์</p>
+											</div>
+										</label>
+									))}
+								</div>
+							</div>
+						</div>
+					</div>
+
+					{/* ── ผู้ชม card ── */}
+					<div className="card">
+						<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-lg)" }}>
+							<IconUsers size={16} />
+							<h2 style={{ fontSize: 18, margin: 0 }}>ผู้ชม</h2>
+						</div>
+						<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
+							{/* Slug */}
+							<div>
+								<label className="label">URL Path (slug)</label>
+								<div style={{ display: "flex", alignItems: "center" }}>
+									<span style={{ padding: "8px 12px", background: "#f5f0e8", border: "1px solid #d5cfc4", borderRight: "none", borderRadius: "var(--radius-md) 0 0 var(--radius-md)", fontSize: 13, color: "var(--color-muted)", whiteSpace: "nowrap" }}>
+										/{t.slug}/register/
+									</span>
+									<input className="input input-bordered" style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }} placeholder="attendee" value={form.attendee_url} onChange={(e) => setForm({ ...form, attendee_url: e.target.value })} />
+								</div>
+							</div>
+							{/* Titles */}
+							<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-sm)" }}>
+								<div>
+									<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (ไทย)</label>
+									<input className="input input-bordered w-full" placeholder="ผู้ชม" value={form.attendee_title} onChange={(e) => setForm({ ...form, attendee_title: e.target.value })} />
+								</div>
+								<div>
+									<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (EN)</label>
+									<input className="input input-bordered w-full" placeholder="Attendee" value={form.attendee_title_en} onChange={(e) => setForm({ ...form, attendee_title_en: e.target.value })} />
+								</div>
+							</div>
+							{/* Form select */}
+							<div>
+								<label className="label" style={{ fontSize: 12 }}>ฟอร์ม</label>
+								<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+									{/* Legacy option */}
+									<label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${attendeeFormId === "" ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: attendeeFormId === "" ? "var(--color-surface-soft)" : "transparent" }}>
+										<input type="radio" name="attendee-form" checked={attendeeFormId === ""} onChange={() => setAttendeeFormId("")} style={{ accentColor: "var(--color-primary)" }} />
+										<div>
+											<span style={{ fontWeight: 500, fontSize: 14 }}>ลิงก์เดิม (Legacy)</span>
+											<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>ใช้ฟอร์มลงทะเบียนเดิม</p>
+										</div>
+									</label>
+									{Object.values(FORM_CONFIGS).map((cfg) => (
+										<label key={cfg.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${attendeeFormId === cfg.id ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: attendeeFormId === cfg.id ? "var(--color-surface-soft)" : "transparent" }}>
+											<input type="radio" name="attendee-form" checked={attendeeFormId === cfg.id} onChange={() => setAttendeeFormId(cfg.id)} style={{ accentColor: "var(--color-primary)" }} />
+											<div>
+												<span style={{ fontWeight: 500, fontSize: 14 }}>{cfg.label.th}</span>
+												<span style={{ marginLeft: 6, fontSize: 12, color: "var(--color-muted)" }}>{cfg.label.en}</span>
+												<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>{cfg.steps.length} ขั้นตอน · {cfg.steps.reduce((n, s) => n + s.fields.length, 0)} ฟิลด์</p>
+											</div>
+										</label>
+									))}
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -412,79 +541,104 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 
 			{/* ── Tab: Email ────────────────────────────── */}
 			{activeTab === "email" && (
-				<div className="card">
-					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-lg)" }}>
-						<h2 style={{ fontSize: 18, margin: 0 }}>Email Template</h2>
-						<div style={{ display: "flex", gap: 4 }}>
-							<button
-								className={"btn btn-sm " + (emailView === "edit" ? "btn-primary" : "btn-ghost")}
-								onClick={() => setEmailView("edit")}
-							>
-								<IconCode size={14} /> HTML
-							</button>
-							<button
-								className={"btn btn-sm " + (emailView === "preview" ? "btn-primary" : "btn-ghost")}
-								onClick={() => setEmailView("preview")}
-							>
-								<IconEye size={14} /> Preview
-							</button>
-						</div>
-					</div>
+				<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
+					{emailFormTypes.map((type) => {
+						const label = EMAIL_TEMPLATE_LABELS[type] || { th: type, en: type };
+						const customHtml = emailTemplates[type] ?? "";
+						const isCustom = customHtml.trim().length > 0;
+						const vars = EMAIL_TEMPLATE_VARS[type] || EMAIL_TEMPLATE_VARS["competitor"];
+						const isActive = activeEmailType === type;
 
-					{emailView === "edit" ? (
-						<div>
-							<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-sm)" }}>
-								<p style={{ fontSize: 13, color: "var(--color-muted)", margin: 0 }}>
-									ใส่ HTML <strong>เนื้อหาอีเมล</strong> (ส่วน body เท่านั้น)
-								</p>
+						return (
+							<div key={type} className="card" style={{ padding: 0, overflow: "hidden" }}>
+								{/* Card header — click to expand */}
 								<button
-									className="btn btn-sm btn-ghost"
-									onClick={() => setForm({ ...form, email_template_html: DEFAULT_EMAIL_BODY })}
-									title="รีเซ็ตเป็นเทมเพลตเริ่มต้น"
+									type="button"
+									onClick={() => setActiveEmailType(isActive ? "" : type)}
+									style={{
+										width: "100%",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "space-between",
+										padding: "var(--spacing-lg)",
+										background: "none",
+										border: "none",
+										cursor: "pointer",
+										textAlign: "left",
+										gap: "var(--spacing-md)",
+									}}
 								>
-									<IconRotateCcw size={14} /> เทมเพลตเริ่มต้น
+									<div>
+										<span style={{ fontWeight: 600, fontSize: 15 }}>{label.th}</span>
+										<span style={{ marginLeft: 8, fontSize: 13, color: "var(--color-muted)" }}>{label.en}</span>
+										{isCustom && (
+											<span style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "#fef9c3", color: "#854d0e", fontWeight: 500 }}>
+												แก้ไขแล้ว
+											</span>
+										)}
+									</div>
+									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: isActive ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+										<polyline points="6 9 12 15 18 9" />
+									</svg>
 								</button>
+
+								{isActive && (
+									<div style={{ borderTop: "1px solid var(--color-hairline-soft)", padding: "var(--spacing-lg)" }}>
+										{/* Sub-tabs: edit / preview */}
+										<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-md)" }}>
+											<div style={{ display: "flex", gap: 4 }}>
+												<button className={"btn btn-sm " + (emailView === "edit" ? "btn-primary" : "btn-ghost")} onClick={() => setEmailView("edit")}>
+													<IconCode size={14} /> HTML
+												</button>
+												<button className={"btn btn-sm " + (emailView === "preview" ? "btn-primary" : "btn-ghost")} onClick={() => setEmailView("preview")}>
+													<IconEye size={14} /> Preview
+												</button>
+											</div>
+											{isCustom && (
+												<button
+													className="btn btn-sm btn-ghost"
+													onClick={() => setEmailTemplates((prev) => { const n = { ...prev }; delete n[type]; return n; })}
+													title="รีเซ็ตเป็นเทมเพลตเริ่มต้นของระบบ"
+												>
+													<IconRotateCcw size={14} /> ใช้เทมเพลตเริ่มต้น
+												</button>
+											)}
+										</div>
+
+										{emailView === "edit" ? (
+											<div>
+												<p style={{ fontSize: 12, color: "var(--color-muted)", marginBottom: "var(--spacing-sm)", marginTop: 0 }}>
+													ตัวแปร: {vars.map((v) => `{{${v}}}`).join(" ")}
+												</p>
+												<textarea
+													className="textarea textarea-bordered w-full"
+													style={{ height: 320, fontFamily: "var(--font-mono)", fontSize: 13 }}
+													value={customHtml || getDefaultEmailTemplate(type)}
+													onChange={(e) => setEmailTemplates((prev) => ({ ...prev, [type]: e.target.value }))}
+													placeholder="วางโค้ด HTML email body ที่นี่..."
+												/>
+											</div>
+										) : (
+											<div style={{ border: "1px solid #e6dfd8", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+												<div style={{ padding: "8px 12px", background: "#faf9f5", borderBottom: "1px solid #e6dfd8", fontSize: 12, color: "#6c6a64", display: "flex", alignItems: "center", gap: 8 }}>
+													<IconEye size={14} />
+													<span>ตัวอย่างอีเมล — ข้อมูลตัวอย่าง{!isCustom ? " (เทมเพลตเริ่มต้น)" : ""}</span>
+												</div>
+												<iframe
+													srcDoc={buildPreview(type)}
+													style={{ width: "100%", height: 600, border: "none", display: "block" }}
+													sandbox="allow-same-origin"
+												/>
+											</div>
+										)}
+									</div>
+								)}
 							</div>
-							<p style={{ fontSize: 12, color: "var(--color-muted)", marginBottom: "var(--spacing-sm)", marginTop: 0 }}>
-								ตัวแปร: {"{{registrant_name}}"} {"{{tournament_name}}"} {"{{registration_type}}"} {"{{preferred_date}}"} {"{{checkin_open_date}}"} {"{{checkin_close_date}}"} {"{{qr_code_image}}"} {"{{submission_id}}"}
-							</p>
-							<textarea
-								className="textarea textarea-bordered w-full"
-								style={{ height: 300, fontFamily: "var(--font-mono)", fontSize: 13 }}
-								value={form.email_template_html}
-								onChange={(e) => setForm({ ...form, email_template_html: e.target.value })}
-								placeholder={"Paste your HTML email body here...\nLeave empty to use the default template."}
-							/>
-						</div>
-					) : (
-						<div style={{
-							border: "1px solid #e6dfd8",
-							borderRadius: "var(--radius-md)",
-							overflow: "hidden",
-							background: "#f5f0e8",
-						}}>
-							<div style={{
-								padding: "8px 12px",
-								background: "#faf9f5",
-								borderBottom: "1px solid #e6dfd8",
-								fontSize: 12,
-								color: "#6c6a64",
-								display: "flex",
-								alignItems: "center",
-								gap: 8,
-							}}>
-								<IconEye size={14} />
-								<span>{"ตัวอย่างอีเมล — แสดงผลด้วยข้อมูลตัวอย่าง" + (!form.email_template_html.trim() ? " (ใช้เทมเพลตเริ่มต้น)" : "")}</span>
-							</div>
-							<iframe
-								srcDoc={previewSrcDoc}
-								style={{ width: "100%", height: 600, border: "none", display: "block" }}
-								sandbox="allow-same-origin"
-							/>
-						</div>
-					)}
+						);
+					})}
 				</div>
 			)}
 		</div>
+		</>
 	);
 }

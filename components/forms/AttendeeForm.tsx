@@ -6,6 +6,7 @@ import { IconCheck, IconArrowRight, IconArrowLeft } from "../ui/icons";
 interface AttendeeFormProps {
 	slug: string;
 	tournamentName: string;
+	typeLabel: string;
 }
 
 type Step = 1 | 2;
@@ -31,7 +32,7 @@ const initialData: AttendeeData = {
 	acknowledge_privacy_policy: false,
 };
 
-export function AttendeeForm({ slug, tournamentName }: AttendeeFormProps) {
+export function AttendeeForm({ slug, tournamentName, typeLabel }: AttendeeFormProps) {
 	const [step, setStep] = useState<Step>(1);
 	const [data, setData] = useState<AttendeeData>(initialData);
 	const [submitting, setSubmitting] = useState(false);
@@ -82,7 +83,7 @@ export function AttendeeForm({ slug, tournamentName }: AttendeeFormProps) {
 		<div style={{ maxWidth: 640, margin: "0 auto", padding: "var(--spacing-lg)" }}>
 			<div style={{ textAlign: "center", marginBottom: "var(--spacing-xxl)" }}>
 				<h1 style={{ fontSize: 28, marginBottom: 8 }}>{tournamentName}</h1>
-				<span className="badge-coral">ผู้เข้าร่วมงาน</span>
+				<span className="badge-coral">{typeLabel}</span>
 			</div>
 
 			{/* Step Indicator */}
@@ -176,7 +177,7 @@ export function AttendeeForm({ slug, tournamentName }: AttendeeFormProps) {
 							<IconArrowLeft size={16} /> ย้อนกลับ
 						</button>
 						<button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
-							{submitting ? "กำลังส่ง..." : "ส่งการลงทะเบียน"}
+							{submitting ? "กำลังส่ง..." : `ลงทะเบียน${typeLabel}`}
 						</button>
 					</div>
 				</div>

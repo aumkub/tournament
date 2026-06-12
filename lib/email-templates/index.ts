@@ -1,0 +1,24 @@
+import { ATTENDEE_EMAIL_TEMPLATE } from "./attendee";
+import { YOUTH_EMAIL_TEMPLATE } from "./youth";
+
+export { ATTENDEE_EMAIL_TEMPLATE } from "./attendee";
+export { YOUTH_EMAIL_TEMPLATE } from "./youth";
+
+export const EMAIL_TEMPLATE_DEFAULTS: Record<string, string> = {
+	attendee: ATTENDEE_EMAIL_TEMPLATE,
+	youth: YOUTH_EMAIL_TEMPLATE,
+};
+
+export function getDefaultEmailTemplate(type: string): string {
+	return EMAIL_TEMPLATE_DEFAULTS[type] ?? ATTENDEE_EMAIL_TEMPLATE;
+}
+
+export const EMAIL_TEMPLATE_LABELS: Record<string, { th: string; en: string }> = {
+	attendee: { th: "ผู้ชม", en: "Attendee" },
+	youth: { th: "เยาวชน", en: "Youth" },
+};
+
+export const EMAIL_TEMPLATE_VARS: Record<string, string[]> = {
+	attendee: ["registrant_name", "tournament_name", "registration_type", "attendance_days", "checkin_open_date", "checkin_close_date", "qr_code_image", "submission_id"],
+	youth: ["registrant_name", "tournament_name", "registration_type", "child_name", "youth_path_label", "checkin_open_date", "checkin_close_date", "qr_code_image", "submission_id"],
+};

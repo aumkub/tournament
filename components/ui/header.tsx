@@ -6,12 +6,16 @@ import {
 	IconLogOut,
 	IconMenu,
 	IconX,
+	IconSettings,
 } from "./icons";
 
 export function Header() {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const rootData = useRouteLoaderData<Route["loaderArgs"]>("root");
 	const authenticated = rootData?.authenticated ?? false;
+	const role = (rootData as any)?.role ?? null;
+	const backendUrl = (rootData as any)?.backendUrl ?? "/admin";
+	const isAdminPlus = role === "admin" || role === "super_admin";
 
 	const handleLogout = async () => {
 		await fetch("/api/auth/logout", { method: "POST" });
@@ -105,27 +109,51 @@ export function Header() {
 						หน้าหลัก
 					</a>
 					{authenticated ? (
-						<button
-							onClick={handleLogout}
-							style={{
-								display: "inline-flex",
-								alignItems: "center",
-								gap: 6,
-								fontSize: 14,
-								fontWeight: 500,
-								color: "var(--color-ink)",
-								padding: "8px 16px",
-								borderRadius: "var(--radius-md)",
-								border: "1px solid var(--color-hairline, #e6dfd8)",
-								background: "transparent",
-								cursor: "pointer",
-								transition: "border-color 0.15s",
-							}}
-							onMouseOver={(e) => { e.currentTarget.style.borderColor = "var(--color-error)"; e.currentTarget.style.color = "var(--color-error)"; }}
-							onMouseOut={(e) => { e.currentTarget.style.borderColor = "var(--color-hairline, #e6dfd8)"; e.currentTarget.style.color = "var(--color-ink)"; }}
-						>
-							<IconLogOut size={14} /> ออกจากระบบ
-						</button>
+						<>
+							{isAdminPlus && (
+								<a
+									href={backendUrl}
+									style={{
+										display: "inline-flex",
+										alignItems: "center",
+										gap: 6,
+										fontSize: 14,
+										fontWeight: 600,
+										color: "white",
+										textDecoration: "none",
+										padding: "8px 16px",
+										borderRadius: "var(--radius-md)",
+										background: "var(--color-primary)",
+										transition: "opacity 0.15s",
+									}}
+									onMouseOver={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+									onMouseOut={(e) => { e.currentTarget.style.opacity = "1"; }}
+								>
+									<IconSettings size={14} /> Backend
+								</a>
+							)}
+							<button
+								onClick={handleLogout}
+								style={{
+									display: "inline-flex",
+									alignItems: "center",
+									gap: 6,
+									fontSize: 14,
+									fontWeight: 400,
+									color: "var(--color-muted)",
+									padding: "8px 12px",
+									borderRadius: "var(--radius-md)",
+									border: "none",
+									background: "transparent",
+									cursor: "pointer",
+									transition: "color 0.15s",
+								}}
+								onMouseOver={(e) => { e.currentTarget.style.color = "var(--color-error)"; }}
+								onMouseOut={(e) => { e.currentTarget.style.color = "var(--color-muted)"; }}
+							>
+								<IconLogOut size={14} /> ออกจากระบบ
+							</button>
+						</>
 					) : (
 						<a
 							href="/admin"
@@ -189,27 +217,49 @@ export function Header() {
 						หน้าหลัก
 					</a>
 					{authenticated ? (
-						<button
-							onClick={() => { setMenuOpen(false); handleLogout(); }}
-							style={{
-								fontSize: 15,
-								fontWeight: 500,
-								color: "var(--color-error)",
-								textDecoration: "none",
-								padding: "12px 16px",
-								borderRadius: "var(--radius-md)",
-								display: "flex",
-								alignItems: "center",
-								gap: 8,
-								background: "transparent",
-								border: "none",
-								cursor: "pointer",
-								width: "100%",
-								textAlign: "left",
-							}}
-						>
-							<IconLogOut size={16} /> ออกจากระบบ
-						</button>
+						<>
+							{isAdminPlus && (
+								<a
+									href={backendUrl}
+									onClick={() => setMenuOpen(false)}
+									style={{
+										fontSize: 15,
+										fontWeight: 600,
+										color: "white",
+										textDecoration: "none",
+										padding: "12px 16px",
+										borderRadius: "var(--radius-md)",
+										display: "flex",
+										alignItems: "center",
+										gap: 8,
+										background: "var(--color-primary)",
+									}}
+								>
+									<IconSettings size={16} /> Backend
+								</a>
+							)}
+							<button
+								onClick={() => { setMenuOpen(false); handleLogout(); }}
+								style={{
+									fontSize: 15,
+									fontWeight: 400,
+									color: "var(--color-muted)",
+									textDecoration: "none",
+									padding: "12px 16px",
+									borderRadius: "var(--radius-md)",
+									display: "flex",
+									alignItems: "center",
+									gap: 8,
+									background: "transparent",
+									border: "none",
+									cursor: "pointer",
+									width: "100%",
+									textAlign: "left",
+								}}
+							>
+								<IconLogOut size={16} /> ออกจากระบบ
+							</button>
+						</>
 					) : (
 						<a
 							href="/admin"

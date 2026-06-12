@@ -1,7 +1,10 @@
 import type { Route } from "./+types/register/register";
 import { CompetitorForm } from "../../../components/forms/CompetitorForm";
 import { AttendeeForm } from "../../../components/forms/AttendeeForm";
+import { DynamicMultiStepForm } from "../../../components/forms/DynamicMultiStepForm";
 import { IconClock, IconCamera } from "../../../components/ui/icons";
+import { FORM_CONFIGS, getFormConfigBySlug } from "../../../lib/form-configs/index";
+import type { FormConfig } from "../../../types/form-config";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
@@ -9,7 +12,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 	const type = params.type;
 
 	const tournament = await env.DB.prepare(
-		"SELECT name, photo_url, competitor_url, attendee_url, registration_open_at, registration_close_at FROM tournaments WHERE slug = ?",
+		"SELECT * FROM tournaments WHERE slug = ?",
 	)
 		.bind(slug)
 		.first();
@@ -18,7 +21,38 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 		throw new Response("Tournament not found", { status: 404 });
 	}
 
-	// Resolve what registration type this URL maps to
+	// Check dynamic form configs first (form_urls_json maps formId → urlSlug)
+	let formId: string | null = null;
+	let formUrls: Record<string, string> = {};
+	try { formUrls = JSON.parse((tournament.form_urls_json as string) || "{}"); } catch { /* column may not exist yet */ }
+	for (const [fid, fslug] of Object.entries(formUrls)) {
+		if (type === fslug) { formId = fid; break; }
+	}
+	// Also match defaultUrlSlug from any registered config
+	if (!formId) {
+		const configMatch = getFormConfigBySlug(type!);
+		if (configMatch) formId = configMatch.id;
+	}
+
+	const testMode = !!(tournament.test_mode as number | boolean);
+
+	if (formId) {
+		const formConfig = FORM_CONFIGS[formId];
+		if (!formConfig) throw new Response("Not found", { status: 404 });
+		return {
+			slug,
+			type: formId,
+			typeLabel: formConfig.label.th,
+			tournamentName: tournament.name as string,
+			coverUrl: tournament.photo_url ? `/api/file?key=${encodeURIComponent(tournament.photo_url as string)}` : null,
+			registrationOpen: tournament.registration_open_at as number,
+			registrationClose: tournament.registration_close_at as number,
+			formConfig,
+			testMode,
+		};
+	}
+
+	// Resolve legacy competitor / attendee types
 	const competitorSuffix = (tournament.competitor_url as string) || "competitor";
 	const attendeeSuffix = (tournament.attendee_url as string) || "attendee";
 
@@ -26,7 +60,6 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 	if (type === competitorSuffix) registrationType = "competitor";
 	else if (type === attendeeSuffix) registrationType = "attendee";
 
-	// Also match the default names for backwards compat
 	if (!registrationType) {
 		if (type === "competitor") registrationType = "competitor";
 		else if (type === "attendee") registrationType = "attendee";
@@ -36,20 +69,26 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 		throw new Response("Not found", { status: 404 });
 	}
 
+	const customTitle = registrationType === "competitor"
+		? (tournament.competitor_title as string | null)
+		: (tournament.attendee_title as string | null);
+
 	return {
 		slug,
 		type: registrationType,
+		typeLabel: customTitle || (registrationType === "competitor" ? "ผู้เข้าแข่งขัน" : "ผู้เข้าร่วมงาน"),
 		tournamentName: tournament.name as string,
 		coverUrl: tournament.photo_url ? `/api/file?key=${encodeURIComponent(tournament.photo_url as string)}` : null,
 		registrationOpen: tournament.registration_open_at as number,
 		registrationClose: tournament.registration_close_at as number,
+		formConfig: null,
+		testMode,
 	};
 }
 
 export function meta({ data }: Route.MetaArgs) {
-	const label = data?.type === "competitor" ? "ลงทะเบียนผู้เข้าแข่งขัน" : "ลงทะเบียนผู้เข้าร่วมงาน";
 	return [
-		{ title: `${data?.tournamentName || "Tournament"} — ${label}` },
+		{ title: `${data?.tournamentName || "Tournament"} — ${data?.typeLabel || "ลงทะเบียน"}` },
 	];
 }
 
@@ -57,7 +96,7 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 	const now = Date.now();
 	const isOpen = now >= loaderData.registrationOpen && now <= loaderData.registrationClose;
 	const isCompetitor = loaderData.type === "competitor";
-	const typeLabel = isCompetitor ? "ผู้เข้าแข่งขัน" : "ผู้เข้าร่วมงาน";
+	const typeLabel = loaderData.typeLabel;
 
 	return (
 		<div>
@@ -112,7 +151,7 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 						color: "white",
 						backdropFilter: "blur(4px)",
 					}}>
-						{typeLabel}
+						{loaderData.typeLabel}
 					</span>
 				</div>
 			</div>
@@ -136,9 +175,17 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 				</div>
 			) : (
 				<div style={{ padding: "var(--spacing-xl) 0 var(--spacing-section)" }}>
-					{isCompetitor
-						? <CompetitorForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} />
-						: <AttendeeForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} />
+					{loaderData.formConfig
+						? <DynamicMultiStepForm
+							config={loaderData.formConfig as any}
+							slug={loaderData.slug}
+							tournamentName={loaderData.tournamentName}
+							typeLabel={loaderData.typeLabel}
+							testMode={loaderData.testMode}
+						  />
+						: isCompetitor
+							? <CompetitorForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={loaderData.typeLabel} />
+							: <AttendeeForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={loaderData.typeLabel} />
 					}
 				</div>
 			)}

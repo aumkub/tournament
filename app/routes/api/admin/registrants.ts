@@ -57,10 +57,18 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
 	const countResult = await env.DB.prepare(countQuery).bind(...countBinds).first();
 
+	// Distinct types with counts for filter dropdown
+	const typesResult = await env.DB.prepare(
+		`SELECT r.type, COUNT(*) as cnt FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? GROUP BY r.type ORDER BY cnt DESC`,
+	)
+		.bind(slug)
+		.all();
+
 	return Response.json({
 		registrants: results.results,
 		total: (countResult?.total as number) || 0,
 		page,
 		limit,
+		types: typesResult.results as { type: string; cnt: number }[],
 	});
 }

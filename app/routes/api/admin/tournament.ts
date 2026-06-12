@@ -40,6 +40,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		const formData = await request.formData();
 		const file = formData.get("cover_photo") as File | null;
 		const name = formData.get("name") as string | null;
+		const newSlug = formData.get("slug") as string | null;
 		const registration_limit = formData.get("registration_limit") as string | null;
 		const registration_open_at = formData.get("registration_open_at") as string | null;
 		const registration_close_at = formData.get("registration_close_at") as string | null;
@@ -48,6 +49,10 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		const email_template_html = formData.get("email_template_html") as string | null;
 		const competitor_url = formData.get("competitor_url") as string | null;
 		const attendee_url = formData.get("attendee_url") as string | null;
+		const competitor_title = formData.get("competitor_title") as string | null;
+		const attendee_title = formData.get("attendee_title") as string | null;
+		const competitor_title_en = formData.get("competitor_title_en") as string | null;
+		const attendee_title_en = formData.get("attendee_title_en") as string | null;
 		const competitor_limit = formData.get("competitor_limit") as string | null;
 		const attendee_limit = formData.get("attendee_limit") as string | null;
 
@@ -71,6 +76,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		}
 
 		if (name !== null) { sets.push("name = ?"); binds.push(name); }
+		if (newSlug !== null && newSlug.trim()) { sets.push("slug = ?"); binds.push(newSlug.trim()); }
 		if (registration_limit !== null) {
 			sets.push("registration_limit = ?");
 			binds.push(registration_limit ? parseInt(registration_limit) : null);
@@ -82,8 +88,23 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		if (email_template_html !== null) { sets.push("email_template_html = ?"); binds.push(email_template_html); }
 		if (competitor_url !== null) { sets.push("competitor_url = ?"); binds.push(competitor_url || null); }
 		if (attendee_url !== null) { sets.push("attendee_url = ?"); binds.push(attendee_url || null); }
+		if (competitor_title !== null) { sets.push("competitor_title = ?"); binds.push(competitor_title || null); }
+		if (attendee_title !== null) { sets.push("attendee_title = ?"); binds.push(attendee_title || null); }
+		if (competitor_title_en !== null) { sets.push("competitor_title_en = ?"); binds.push(competitor_title_en || null); }
+		if (attendee_title_en !== null) { sets.push("attendee_title_en = ?"); binds.push(attendee_title_en || null); }
+		const competitor_form_id = formData.get("competitor_form_id") as string | null;
+		const attendee_form_id = formData.get("attendee_form_id") as string | null;
+		if (competitor_form_id !== null) { sets.push("competitor_form_id = ?"); binds.push(competitor_form_id || null); }
+		if (attendee_form_id !== null) { sets.push("attendee_form_id = ?"); binds.push(attendee_form_id || null); }
 		if (competitor_limit !== null) { sets.push("competitor_limit = ?"); binds.push(competitor_limit ? parseInt(competitor_limit) : null); }
 		if (attendee_limit !== null) { sets.push("attendee_limit = ?"); binds.push(attendee_limit ? parseInt(attendee_limit) : null); }
+
+		const form_urls_json = formData.get("form_urls_json") as string | null;
+		const email_templates_json = formData.get("email_templates_json") as string | null;
+		const test_mode = formData.get("test_mode") as string | null;
+		if (form_urls_json !== null) { sets.push("form_urls_json = ?"); binds.push(form_urls_json || "{}"); }
+		if (email_templates_json !== null) { sets.push("email_templates_json = ?"); binds.push(email_templates_json || "{}"); }
+		if (test_mode !== null) { sets.push("test_mode = ?"); binds.push(test_mode === "1" ? 1 : 0); }
 
 		// Handle password fields from form data
 		const pwAssistant = formData.get("password_assistant") as string | null;
@@ -127,8 +148,12 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		photo_url?: string;
 		competitor_url?: string;
 		attendee_url?: string;
+		competitor_title?: string;
+		attendee_title?: string;
 		competitor_limit?: number | null;
 		attendee_limit?: number | null;
+		form_urls_json?: string;
+		email_templates_json?: string;
 		passwords?: { assistant?: string; admin?: string; super_admin?: string };
 	};
 
@@ -145,8 +170,12 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 	if (body.photo_url !== undefined) { sets.push("photo_url = ?"); binds.push(body.photo_url); }
 	if (body.competitor_url !== undefined) { sets.push("competitor_url = ?"); binds.push(body.competitor_url); }
 	if (body.attendee_url !== undefined) { sets.push("attendee_url = ?"); binds.push(body.attendee_url); }
+	if (body.competitor_title !== undefined) { sets.push("competitor_title = ?"); binds.push(body.competitor_title); }
+	if (body.attendee_title !== undefined) { sets.push("attendee_title = ?"); binds.push(body.attendee_title); }
 	if (body.competitor_limit !== undefined) { sets.push("competitor_limit = ?"); binds.push(body.competitor_limit); }
 	if (body.attendee_limit !== undefined) { sets.push("attendee_limit = ?"); binds.push(body.attendee_limit); }
+	if (body.form_urls_json !== undefined) { sets.push("form_urls_json = ?"); binds.push(body.form_urls_json || "{}"); }
+	if (body.email_templates_json !== undefined) { sets.push("email_templates_json = ?"); binds.push(body.email_templates_json || "{}"); }
 
 	if (body.passwords) {
 		const existing = await env.DB.prepare("SELECT passwords_json FROM tournaments WHERE slug = ?").bind(slug).first();
