@@ -79,50 +79,49 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 	return (
 		<>
 			<AdminNav slug={loaderData.slug} name={loaderData.name} role={loaderData.role} current="dashboard" />
-		<div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--spacing-lg)" }}>
-			{/* Header */}
-			<div style={{ marginBottom: "var(--spacing-xl)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--spacing-md)", flexWrap: "wrap" }}>
-				<div>
-					<h1 style={{ fontSize: "clamp(22px, 4vw, 28px)", marginBottom: 4 }}>{loaderData.name}</h1>
-					<p style={{ fontSize: 14, color: "var(--color-muted)", margin: 0 }}>slug: {loaderData.slug}</p>
+			<div className="max-w-[1200px] mx-auto px-lg mt-6">
+				{/* Header */}
+				<div className="mb-xl flex items-start justify-between gap-md flex-wrap">
+					<div>
+						<h1 className="text-[clamp(22px,4vw,28px)] mb-1">{loaderData.name}</h1>
+						<p className="text-sm text-muted m-0">slug: {loaderData.slug}</p>
+					</div>
+					<div className="flex gap-sm flex-wrap">
+						{loaderData.previewLinks.map((link) => (
+							<a
+								key={link.href}
+								href={link.href}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="btn btn-sm btn-ghost no-underline text-xs gap-1"
+							>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+									<polyline points="15 3 21 3 21 9"/>
+									<line x1="10" y1="14" x2="21" y2="3"/>
+								</svg>
+								{link.label}
+							</a>
+						))}
+					</div>
 				</div>
-				<div style={{ display: "flex", gap: "var(--spacing-sm)", flexWrap: "wrap" }}>
-					{loaderData.previewLinks.map((link) => (
-						<a
-							key={link.href}
-							href={link.href}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="btn btn-sm btn-ghost"
-							style={{ textDecoration: "none", fontSize: 13, gap: 4 }}
-						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-								<polyline points="15 3 21 3 21 9"/>
-								<line x1="10" y1="14" x2="21" y2="3"/>
-							</svg>
-							{link.label}
-						</a>
-					))}
-				</div>
-			</div>
 
-			{/* Stats */}
-			<div style={{ marginBottom: "var(--spacing-xl)" }}>
-				<StatsPanel slug={loaderData.slug} />
-			</div>
+				{/* Stats */}
+				<div className="mb-xl">
+					<StatsPanel slug={loaderData.slug} />
+				</div>
 
-			{/* Two-column layout */}
-			<div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--spacing-lg)" }} className="md:grid-cols-[1fr_320px]">
-				<div>
-					<h2 style={{ fontSize: 20, marginBottom: "var(--spacing-lg)" }}>รายชื่อผู้ลงทะเบียน</h2>
-					<RegistrantTable slug={loaderData.slug} typeLabels={loaderData.typeLabels} role={loaderData.role} />
-				</div>
-				<div>
-					<CheckinFeed slug={loaderData.slug} />
+				{/* Two-column layout */}
+				<div className="grid grid-cols-1 gap-lg md:grid-cols-[1fr_320px]">
+					<div>
+						<h2 className="text-[20px] mb-lg">รายชื่อผู้ลงทะเบียน</h2>
+						<RegistrantTable slug={loaderData.slug} typeLabels={loaderData.typeLabels} role={loaderData.role} />
+					</div>
+					<div>
+						<CheckinFeed slug={loaderData.slug} />
+					</div>
 				</div>
 			</div>
-		</div>
 		</>
 	);
 }

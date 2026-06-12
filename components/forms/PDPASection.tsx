@@ -15,48 +15,40 @@ export function PDPASection({ values, onChange }: PDPASectionProps) {
 	};
 
 	return (
-		<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
-			<h3 style={{ fontSize: 20, marginBottom: "var(--spacing-sm)", fontFamily: "var(--font-serif)" }}>
+		<div className="flex flex-col gap-lg">
+			<h3 className="text-[20px] mb-sm font-serif">
 				ข้อตกลงความยินยอม (PDPA)
 			</h3>
-			<p style={{ fontSize: 14, color: "var(--color-muted)", marginBottom: "var(--spacing-md)" }}>
+			<p className="text-sm text-muted mb-md">
 				กรุณาอ่านและให้ความยินยอมในข้อต่อไปนี้
 			</p>
 
 			{PDPACONSENT_KEYS.map((key) => (
 				<div
 					key={key}
-					style={{
-						padding: "var(--spacing-md)",
-						background: "var(--color-canvas)",
-						border: "1px solid var(--color-hairline)",
-						borderRadius: "var(--radius-md)",
-					}}
+					className="p-md bg-canvas border border-hairline rounded-md"
 				>
 					<p
-						style={{
-							fontSize: 14,
-							color: "var(--color-body)",
-							marginBottom: "var(--spacing-sm)",
-							lineHeight: 1.5,
-						}}
+						className="text-sm text-body mb-sm leading-relaxed"
 					>
 						{PDPACONSENT_LABELS[key]}
 					</p>
-					<div style={{ display: "flex", gap: "var(--spacing-lg)" }}>
-						<label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, cursor: "pointer" }}>
+					<div className="flex gap-lg">
+						<label className="flex items-center gap-1.5 text-sm cursor-pointer">
 							<input
 								type="radio"
 								name={key}
+								className="radio"
 								checked={values[key] === true}
 								onChange={() => handleChange(key, true)}
 							/>
 							ยินยอม
 						</label>
-						<label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, cursor: "pointer" }}>
+						<label className="flex items-center gap-1.5 text-sm cursor-pointer">
 							<input
 								type="radio"
 								name={key}
+								className="radio"
 								checked={values[key] === false}
 								onChange={() => handleChange(key, false)}
 							/>
@@ -67,7 +59,7 @@ export function PDPASection({ values, onChange }: PDPASectionProps) {
 			))}
 
 			{!values.acknowledge_privacy_policy && (
-				<p style={{ color: "var(--color-error)", fontSize: 13 }}>
+				<p className="text-error text-xs">
 					* ต้องรับทราบนโยบายความเป็นส่วนตัวจึงจะดำเนินการต่อได้
 				</p>
 			)}

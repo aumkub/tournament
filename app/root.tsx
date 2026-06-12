@@ -25,7 +25,7 @@ export const links: Route.LinksFunction = () => [
 	},
 	{
 		rel: "stylesheet",
-		href: "https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500;600;700&display=swap",
+		href: "https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap",
 	},
 ];
 
@@ -75,7 +75,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
 	const { pathname } = useLocation();
-	const hideHeader = /\/register\//.test(pathname) || pathname.startsWith("/admin");
+	const hideHeader = /\/register\//.test(pathname) || /^\/admin\/.+/.test(pathname);
 	return (
 		<>
 			{!hideHeader && <Header />}

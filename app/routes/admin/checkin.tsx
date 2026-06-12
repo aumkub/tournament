@@ -41,11 +41,11 @@ export default function CheckinPage({ loaderData }: Route.ComponentProps) {
 	return (
 		<>
 			<AdminNav slug={loaderData.slug} name={loaderData.name} role={loaderData.role} current="checkin" />
-			<div style={{ maxWidth: 480, margin: "0 auto", padding: "var(--spacing-lg)" }}>
-				<h1 style={{ fontSize: 24, textAlign: "center", marginBottom: "var(--spacing-xs)" }}>
+			<div className="max-w-[480px] mx-auto px-lg">
+				<h1 className="text-[24px] text-center mb-xs">
 					QR Scanner
 				</h1>
-				<p style={{ textAlign: "center", color: "var(--color-muted)", fontSize: 14, marginBottom: "var(--spacing-xl)" }}>
+				<p className="text-center text-muted text-sm mb-xl">
 					{loaderData.name}
 				</p>
 				<QRScanner slug={loaderData.slug} />

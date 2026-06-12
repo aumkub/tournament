@@ -82,129 +82,124 @@ export function QRScanner({ slug }: QRScannerProps) {
 		: "";
 
 	return (
-		<div style={{ maxWidth: 480, margin: "0 auto" }}>
+		<div className="max-w-[480px] mx-auto">
 			{/* Camera View */}
 			<div
-				style={{
-					position: "relative",
-					width: "100%",
-					aspectRatio: "1",
-					background: "var(--color-surface-dark)",
-					borderRadius: "var(--radius-lg)",
-					overflow: "hidden",
-					marginBottom: "var(--spacing-lg)",
-				}}
+				className="relative w-full rounded-lg overflow-hidden mb-lg"
+				style={{ aspectRatio: "1", background: "var(--color-surface-dark)" }}
 			>
 				<video
 					ref={videoRef}
 					autoPlay
-					playsInline
 					muted
-					style={{ width: "100%", height: "100%", objectFit: "cover" }}
+					playsInline
+					className="w-full h-full object-cover"
 				/>
-				{!scanning && (
-					<div
-						style={{
-							position: "absolute",
-							inset: 0,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							flexDirection: "column",
-							gap: "var(--spacing-md)",
-						}}
-					>
-						<IconQrCode size={48} color="var(--color-on-dark)" />
-						<button className="btn btn-primary" onClick={startCamera}>
-							<IconCamera size={16} /> เปิดกล้อง
-						</button>
-					</div>
-				)}
+
+				{/* Scanner overlay */}
 				{scanning && (
 					<div
 						style={{
-							position: "absolute",
-							top: "50%",
-							left: "50%",
-							transform: "translate(-50%, -50%)",
-							width: "60%",
-							aspectRatio: "1",
-							border: "3px solid var(--color-primary)",
-							borderRadius: "var(--radius-lg)",
-							boxShadow: "0 0 0 9999px rgba(0,0,0,0.4)",
+							position: "absolute", inset: 0,
+							display: "flex", alignItems: "center", justifyContent: "center",
+							background: "rgba(0,0,0,0.1)",
 						}}
-					/>
+					>
+						<div style={{
+							width: "70%",
+							aspectRatio: "1",
+							border: "2px dashed " + (result ? resultColor : "white"),
+							borderRadius: "var(--radius-lg)",
+						}} />
+					</div>
+				)}
+
+				{/* Scan result overlay */}
+				{result && (
+					<div
+						style={{
+							position: "absolute", inset: 0,
+							display: "flex", alignItems: "center", justifyContent: "center",
+							background: resultColor === "var(--color-success)"
+								? "rgba(93, 184, 114, 0.9)"
+								: resultColor === "var(--color-warning)"
+									? "rgba(212, 160, 23, 0.9)"
+									: "rgba(198, 69, 69, 0.9)",
+						}}
+					>
+						<div style={{ textAlign: "center", color: "white", padding: "var(--spacing-lg)" }}>
+							{result.status === "success" && (
+								<>
+									<IconCheckCircleFilled size={48} color="white" />
+									<p style={{ fontSize: 18, fontWeight: 600, margin: "var(--spacing-sm) 0 4px" }}>
+										เช็คอินสำเร็จ!
+									</p>
+									<p style={{ fontSize: 14, margin: 0 }}>{result.name}</p>
+									<p style={{ fontSize: 12, opacity: 0.9, margin: "4px 0 0" }}>
+										{result.type === "competitor" ? "ผู้เข้าแข่งขัน" : "ผู้เข้าร่วมงาน"}
+									</p>
+								</>
+							)}
+							{result.status === "already_checked_in" && (
+								<>
+									<IconWarningFilled size={48} color="white" />
+									<p style={{ fontSize: 18, fontWeight: 600, margin: "var(--spacing-sm) 0 4px" }}>
+										เช็คอินแล้ว
+									</p>
+									<p style={{ fontSize: 14, margin: 0 }}>{result.name}</p>
+									<p style={{ fontSize: 12, opacity: 0.9, margin: "4px 0 0" }}>
+										{new Date(result.checked_in_at).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" })}
+									</p>
+								</>
+							)}
+							{result.status === "not_found" && (
+								<>
+									<IconXCircleFilled size={48} color="white" />
+									<p style={{ fontSize: 16, fontWeight: 600, margin: "var(--spacing-md) 0 4px" }}>
+										ไม่พบ QR
+									</p>
+									<p style={{ fontSize: 14, margin: 0 }}>{result.error}</p>
+								</>
+							)}
+							{result.status === "error" && (
+								<>
+									<IconXCircleFilled size={48} color="white" />
+									<p style={{ fontSize: 16, fontWeight: 600, margin: "var(--spacing-md) 0 4px" }}>
+										ข้อผิดพลาด
+									</p>
+									<p style={{ fontSize: 14, margin: 0 }}>{result.error}</p>
+								</>
+							)}
+						</div>
+					</div>
 				)}
 			</div>
 
-			{scanning && (
-				<button className="btn btn-secondary" onClick={stopCamera} style={{ width: "100%", marginBottom: "var(--spacing-lg)" }}>
-					ปิดกล้อง
-				</button>
-			)}
-
-			{/* Manual token input */}
-			<div style={{ marginBottom: "var(--spacing-lg)" }}>
-				<label className="label">หรือกรอก QR Token เอง</label>
-				<div style={{ display: "flex", gap: "var(--spacing-sm)" }}>
-					<input
-						className="input input-bordered w-full"
-						placeholder="วาง token ที่นี่..."
-						value={manualToken}
-						onChange={(e) => setManualToken(e.target.value)}
-					/>
-					<button className="btn btn-primary" onClick={() => handleScan(manualToken)} style={{ whiteSpace: "nowrap" }}>
-						เช็คอิน
+			{/* Controls */}
+			<div style={{ display: "flex", gap: "var(--spacing-sm)" }}>
+				{scanning ? (
+					<button
+						className="btn btn-secondary flex-1"
+						onClick={stopCamera}
+					>
+						หยุดสแกน
 					</button>
-				</div>
-			</div>
+				) : (
+					<button
+						className="btn btn-primary flex-1"
+						onClick={startCamera}
+					>
+						<IconCamera size={16} /> เปิดกล้อง
+					</button>
+				)}
 
-			{/* Result overlay */}
-			{result && (
-				<div
-					style={{
-						padding: "var(--spacing-xl)",
-						background: resultColor,
-						color: "white",
-						borderRadius: "var(--radius-lg)",
-						textAlign: "center",
-					}}
+				<button
+					className="btn btn-secondary"
+					onClick={() => document.getElementById("html5-qrcode-barcode-scanner")?.remove()}
 				>
-					{result.status === "success" && (
-						<>
-							<IconCheckCircleFilled size={48} color="white" />
-							<p style={{ fontSize: 18, fontWeight: 600, margin: "8px 0 4px" }}>เช็คอินสำเร็จ</p>
-							<p style={{ fontSize: 16, margin: 0 }}>{(result as any).name}</p>
-							<p style={{ fontSize: 13, opacity: 0.8, margin: "4px 0 0" }}>
-								{(result as any).type === "competitor" ? "ผู้เข้าแข่งขัน" : "ผู้เข้าร่วมงาน"}
-							</p>
-						</>
-					)}
-					{result.status === "already_checked_in" && (
-						<>
-							<IconWarningFilled size={48} color="white" />
-							<p style={{ fontSize: 18, fontWeight: 600, margin: "8px 0 4px" }}>เช็คอินแล้ว</p>
-							<p style={{ fontSize: 16, margin: 0 }}>{(result as any).name}</p>
-							<p style={{ fontSize: 13, opacity: 0.8, margin: "4px 0 0" }}>
-								เวลาเดิม: {new Date((result as any).checked_in_at).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" })}
-							</p>
-						</>
-					)}
-					{result.status === "not_found" && (
-						<>
-							<IconXCircleFilled size={48} color="white" />
-							<p style={{ fontSize: 18, fontWeight: 600, margin: "8px 0" }}>ไม่พบ QR นี้</p>
-						</>
-					)}
-					{result.status === "error" && (
-						<>
-							<IconXCircleFilled size={48} color="white" />
-							<p style={{ fontSize: 18, fontWeight: 600, margin: "8px 0" }}>เกิดข้อผิดพลาด</p>
-							<p style={{ fontSize: 14, margin: 0 }}>{(result as any).error}</p>
-						</>
-					)}
-				</div>
-			)}
+					<IconQrCode size={16} />
+				</button>
+			</div>
 		</div>
 	);
 }

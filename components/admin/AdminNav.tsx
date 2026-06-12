@@ -8,146 +8,74 @@ type Props = {
 	current: "dashboard" | "checkin" | "settings";
 };
 
-const navLink = (active: boolean) => ({
-	display: "inline-flex",
-	alignItems: "center",
-	gap: 6,
-	fontSize: 14,
-	fontWeight: active ? 600 : 400,
-	color: active ? "var(--color-primary)" : "var(--color-body)",
-	textDecoration: "none",
-	padding: "6px 12px",
-	borderRadius: "var(--radius-md)",
-	background: active ? "rgba(204,120,92,0.08)" : "transparent",
-	transition: "background 0.15s",
-} as React.CSSProperties);
+const navLinkBase = "inline-flex items-center gap-1.5 text-sm font-medium no-underline px-3 py-1.5 rounded-md transition-colors whitespace-nowrap";
+const navLinkActive = `${navLinkBase} text-primary bg-[rgba(204,120,92,0.1)]`;
+const navLinkInactive = `${navLinkBase} text-muted hover:text-body hover:bg-surface-soft`;
 
 export function AdminNav({ slug, name, role, current }: Props) {
 	const isSuperAdmin = role === "super_admin";
 	const isAdmin = role === "admin" || isSuperAdmin;
 
 	return (
-		<nav
-			style={{
-				position: "sticky",
-				top: 0,
-				zIndex: 50,
-				background: "var(--color-base-100)",
-				borderBottom: "1px solid var(--color-hairline, #e6dfd8)",
-			}}
-		>
-			<div
-				style={{
-					maxWidth: 1200,
-					margin: "0 auto",
-					padding: "0 var(--spacing-lg)",
-					height: 56,
-					display: "flex",
-					alignItems: "center",
-					gap: "var(--spacing-md)",
-				}}
-			>
-				{/* Back to list */}
-				<a
-					href="/admin"
-					style={{
-						display: "inline-flex",
-						alignItems: "center",
-						gap: 4,
-						fontSize: 13,
-						color: "var(--color-muted)",
-						textDecoration: "none",
-						flexShrink: 0,
-					}}
-				>
-					<IconArrowLeft size={14} />
-					<span className="hidden sm:inline">รายการ</span>
+		<nav className="sticky top-0 z-50 bg-canvas border-b border-hairline">
+			<div className="max-w-[1200px] mx-auto px-lg h-14 flex items-center gap-sm">
+				{/* Brand + breadcrumb */}
+				<a href="/admin" className="flex items-center gap-2 text-ink no-underline flex-shrink-0">
+					<span className="inline-flex items-center justify-center w-7 h-7 bg-primary text-white text-sm font-bold rounded-md leading-none">
+						T
+					</span>
+					<span className="hidden md:inline text-sm font-semibold text-ink">Tournament</span>
 				</a>
 
-				{/* Divider */}
-				<span style={{ color: "var(--color-hairline, #e6dfd8)", fontSize: 18 }}>›</span>
+				<span className="text-hairline text-base flex-shrink-0">/</span>
 
 				{/* Tournament name */}
-				<span
-					style={{
-						fontSize: 14,
-						fontWeight: 600,
-						color: "var(--color-ink)",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
-						flexShrink: 1,
-						minWidth: 0,
-					}}
-				>
+				<span className="text-sm font-semibold text-ink overflow-hidden text-ellipsis whitespace-nowrap flex-shrink min-w-0">
 					{name}
 				</span>
 
-				{/* Spacer */}
-				<div style={{ flex: 1 }} />
+				<div className="flex-1" />
 
 				{/* Nav links */}
-				{isAdmin && (
-					<a
-						href={`/admin/${slug}`}
-						style={navLink(current === "dashboard")}
-					>
-						<span className="hidden sm:inline">Dashboard</span>
-						<span className="sm:hidden">DB</span>
+				<div className="flex items-center gap-xs">
+					{isAdmin && (
+						<a href={`/admin/${slug}`} className={current === "dashboard" ? navLinkActive : navLinkInactive}>
+							<span className="hidden md:inline">Dashboard</span>
+							<span className="md:hidden text-xs">DB</span>
+						</a>
+					)}
+
+					<a href={`/admin/${slug}/checkin`} className={current === "checkin" ? navLinkActive : navLinkInactive}>
+						<IconQrCode size={15} />
+						<span className="hidden md:inline">QR Scanner</span>
 					</a>
-				)}
 
-				<a
-					href={`/admin/${slug}/checkin`}
-					style={navLink(current === "checkin")}
-				>
-					<IconQrCode size={15} />
-					<span className="hidden sm:inline">QR Scanner</span>
-				</a>
+					{isSuperAdmin && (
+						<>
+							<a href={`/admin/${slug}/settings`} className={current === "settings" ? navLinkActive : navLinkInactive}>
+								<IconSettings size={15} />
+								<span className="hidden md:inline">Settings</span>
+							</a>
 
-				{isSuperAdmin && (
-					<>
-						<a
-							href={`/admin/${slug}/settings`}
-							style={navLink(current === "settings")}
-						>
-							<IconSettings size={15} />
-							<span className="hidden sm:inline">Settings</span>
-						</a>
+							<a href={`/api/admin/${slug}/export`} className={navLinkInactive}>
+								<IconDownload size={15} />
+								<span className="hidden md:inline">Export</span>
+							</a>
+						</>
+					)}
 
-						<a
-							href={`/api/admin/${slug}/export`}
-							style={navLink(false)}
-						>
-							<IconDownload size={15} />
-							<span className="hidden sm:inline">Export</span>
-						</a>
-					</>
-				)}
-
-				{/* Logout */}
-				<button
-					onClick={async () => {
-						await fetch("/api/auth/logout", { method: "POST" });
-						window.location.href = "/admin";
-					}}
-					style={{
-						display: "inline-flex",
-						alignItems: "center",
-						gap: 6,
-						fontSize: 14,
-						color: "var(--color-muted)",
-						background: "transparent",
-						border: "none",
-						cursor: "pointer",
-						padding: "6px 8px",
-						borderRadius: "var(--radius-md)",
-					}}
-					title="ออกจากระบบ"
-				>
-					<IconLogOut size={15} />
-					<span className="hidden sm:inline">ออกจากระบบ</span>
-				</button>
+					<button
+						onClick={async () => {
+							await fetch("/api/auth/logout", { method: "POST" });
+							window.location.href = "/admin";
+						}}
+						className="inline-flex items-center gap-1.5 text-sm font-medium text-muted bg-transparent border-none cursor-pointer px-3 py-1.5 rounded-md hover:text-error hover:bg-surface-soft transition-colors"
+						title="ออกจากระบบ"
+					>
+						<IconLogOut size={15} />
+						<span className="hidden md:inline">ออกจากระบบ</span>
+					</button>
+				</div>
 			</div>
 		</nav>
 	);

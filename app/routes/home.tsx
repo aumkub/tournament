@@ -52,61 +52,34 @@ function TournamentCard({ t }: { t: any }) {
 	const attendeeLabel = [t.attendee_title, t.attendee_title_en].filter(Boolean).join(" / ") || "ผู้เข้าร่วมงาน";
 
 	return (
-		<div className="card" style={{ display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}>
+		<div className="card flex flex-col overflow-hidden !p-0">
 			{/* Cover Photo */}
-			<div
-				style={{
-					width: "100%",
-					aspectRatio: "16/7",
-					background: "#f5f0e8",
-					overflow: "hidden",
-					position: "relative",
-				}}
-			>
+			<div className="relative overflow-hidden w-full" style={{ aspectRatio: "16/7", background: "var(--color-surface-soft)" }}>
 				{t.coverUrl ? (
-					<img src={t.coverUrl} alt={t.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+					<img src={t.coverUrl} alt={t.name} className="w-full h-full object-cover" />
 				) : (
-					<div style={{
-						width: "100%",
-						height: "100%",
-						display: "flex",
-						flexDirection: "column",
-						alignItems: "center",
-						justifyContent: "center",
-						gap: 4,
-						color: "#8e8b82",
-					}}>
-						<IconCamera size={32} color="#8e8b82" />
-						<span style={{ fontSize: 12 }}>No cover photo</span>
+					<div className="flex flex-col items-center justify-center gap-1 w-full h-full" style={{ color: "var(--color-muted-soft)" }}>
+						<IconCamera size={32} color="var(--color-muted-soft)" />
+						<span className="text-xs">No cover photo</span>
 					</div>
 				)}
 				{isOpen && (
-					<span style={{
-						position: "absolute",
-						top: 8,
-						right: 8,
-						display: "inline-flex",
-						alignItems: "center",
-						gap: 4,
-						padding: "4px 10px",
-						background: "#5db872",
-						color: "white",
-						fontSize: 11,
-						fontWeight: 600,
-						borderRadius: "var(--radius-pill)",
-					}}>
-						<span style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} />
+					<span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-md" style={{ background: "rgba(20,20,19,0.55)", color: "#fff", backdropFilter: "blur(6px)" }}>
+						<span className="w-1.5 h-1.5 rounded-full bg-[#4ade80] flex-shrink-0" style={{ boxShadow: "0 0 0 2px rgba(74,222,128,0.3)" }} />
 						เปิดรับสมัคร
 					</span>
 				)}
 			</div>
 
 			{/* Content */}
-			<div style={{ padding: "var(--spacing-lg)" }}>
-				<h3 style={{ fontSize: 20, marginBottom: "var(--spacing-sm)" }}>{t.name}</h3>
+			<div className="p-lg">
+				<h3 className="text-xl mb-sm">{t.name}</h3>
 
 				{!isOpen && (
-					<p style={{ fontSize: 13, color: now < t.registration_open_at ? "var(--color-warning)" : "var(--color-muted)", marginBottom: "var(--spacing-md)", margin: 0 }}>
+					<p className="text-sm mb-md" style={{
+						color: now < t.registration_open_at ? "var(--color-warning)" : "var(--color-muted)",
+						margin: 0
+					}}>
 						{now < t.registration_open_at
 							? `เปิด: ${new Date(t.registration_open_at).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" })}`
 							: "ปิดรับสมัครแล้ว"
@@ -115,24 +88,22 @@ function TournamentCard({ t }: { t: any }) {
 				)}
 
 				{hasDynamicForms ? (
-					<div style={{ display: "flex", flexWrap: "wrap", gap: "var(--spacing-sm)", marginTop: "var(--spacing-md)" }}>
+					<div className="flex flex-wrap gap-sm mt-md">
 						{dynamicForms.map((f, i) => (
 							<a
 								key={f.formId}
 								href={`/${t.slug}/register/${f.urlSlug}`}
-								className={i === 0 ? "btn btn-primary" : "btn btn-secondary"}
-								style={{ textDecoration: "none", flex: 1, fontSize: 13, minWidth: 120 }}
+								className={`btn ${i === 0 ? "btn-primary" : "btn-secondary"} text-sm min-w-[120px] flex-1`}
 							>
 								ลงทะเบียน{f.label}
 							</a>
 						))}
 					</div>
 				) : (
-					<div style={{ display: "flex", gap: "var(--spacing-sm)", marginTop: "var(--spacing-md)" }}>
+					<div className="flex gap-sm mt-md">
 						<a
 							href={competitorHref}
-							className="btn btn-primary"
-							style={{ textDecoration: "none", flex: 1, fontSize: 13 }}
+							className="btn btn-primary text-base flex-1"
 							target={externalCompetitor ? "_blank" : undefined}
 							rel={externalCompetitor ? "noopener noreferrer" : undefined}
 						>
@@ -140,8 +111,7 @@ function TournamentCard({ t }: { t: any }) {
 						</a>
 						<a
 							href={attendeeHref}
-							className="btn btn-secondary"
-							style={{ textDecoration: "none", flex: 1, fontSize: 13 }}
+							className="btn btn-secondary text-base flex-1"
 							target={externalAttendee ? "_blank" : undefined}
 							rel={externalAttendee ? "noopener noreferrer" : undefined}
 						>
@@ -158,20 +128,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 	const tournaments = loaderData.tournaments || [];
 
 	return (
-		<div style={{ minHeight: "100vh" }}>
+		<div className="min-h-screen">
 			{/* Hero */}
-			<div
-				style={{
-					padding: "var(--spacing-xxl) var(--spacing-lg)",
-					textAlign: "center",
-					maxWidth: 800,
-					margin: "0 auto",
-				}}
-			>
-				<h1 style={{ fontSize: "clamp(32px, 6vw, 48px)", marginBottom: "var(--spacing-md)", letterSpacing: "-1.5px" }}>
+			<div className="max-w-[800px] mx-auto px-lg py-xxl text-center">
+				<h1 className="text-[clamp(32px,6vw,48px)] mb-md" style={{ letterSpacing: "-1.5px" }}>
 					Tournament Registration
 				</h1>
-				<p style={{ fontSize: "clamp(14px, 2.5vw, 18px)", color: "var(--color-body)", lineHeight: 1.6, maxWidth: 600, margin: "0 auto" }}>
+				<p className="text-[clamp(14px,2.5vw,18px)] mx-auto leading-relaxed max-w-[600px]" style={{ color: "var(--color-body)" }}>
 					ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน
 					<br />
 					ลงทะเบียน &rarr; รับ QR Code &rarr; เช็คอินวันงาน
@@ -179,17 +142,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 			</div>
 
 			{/* Tournament List */}
-			<div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 var(--spacing-lg) var(--spacing-section)" }}>
-				<h2 style={{ fontSize: 28, marginBottom: "var(--spacing-xl)", textAlign: "center" }}>
+			<div className="max-w-[1000px] mx-auto px-lg pb-section">
+				<h2 className="text-2xl mb-xl text-center">
 					ทัวร์นาเมนต์ที่เปิดรับสมัคร
 				</h2>
 
 				{tournaments.length === 0 ? (
-					<div className="card" style={{ textAlign: "center", color: "var(--color-muted)", padding: "var(--spacing-xxl)" }}>
-						<p style={{ fontSize: 18 }}>ยังไม่มีทัวร์นาเมนต์ในขณะนี้</p>
+					<div className="card text-center py-xxl" style={{ color: "var(--color-muted)" }}>
+						<p className="text-lg">ยังไม่มีทัวร์นาเมนต์ในขณะนี้</p>
 					</div>
 				) : (
-					<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "var(--spacing-lg)" }}>
+					<div className="grid gap-lg" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
 						{(tournaments as any[]).map((t) => (
 							<TournamentCard key={t.id} t={t} />
 						))}
@@ -198,17 +161,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 			</div>
 
 			{/* Footer */}
-			<footer
-				style={{
-					background: "var(--color-surface-dark)",
-					color: "var(--color-on-dark-soft)",
-					padding: "var(--spacing-xxl) var(--spacing-lg)",
-					textAlign: "center",
-					fontSize: 14,
-				}}
-			>
+			<footer className="py-xxl px-lg text-center text-sm" style={{
+				background: "var(--color-surface-dark)",
+				color: "var(--color-on-dark-soft)"
+			}}>
 				<p>Tournament Registration &amp; Check-in System</p>
-				<p style={{ fontSize: 12, color: "var(--color-on-dark-soft)", marginTop: 4 }}>
+				<p className="text-xs mt-1" style={{ color: "var(--color-on-dark-soft)" }}>
 					Built with Cloudflare Workers &bull; React Router 7
 				</p>
 			</footer>

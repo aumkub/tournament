@@ -257,18 +257,21 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 				>
 					<div
 						className="card"
-						style={{ width: "min(560px, calc(100vw - 2rem))", minWidth: 320, maxHeight: "85vh", overflow: "auto", margin: "var(--spacing-lg)" }}
+						style={{ width: "min(560px, calc(100vw - 2rem))", minWidth: 320, maxHeight: "85vh", display: "flex", flexDirection: "column", padding: 0, margin: "var(--spacing-lg)", overflow: "hidden" }}
 						onClick={(e) => e.stopPropagation()}
 					>
-						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-lg)" }}>
-							<div>
-								<h3 style={{ fontSize: 18, margin: 0 }}>{parseName(selectedReg)}</h3>
-								<span style={{ fontSize: 12, color: "var(--color-muted)" }}>{getTypeLabel(selectedReg.type, typeLabels)}</span>
-							</div>
-							<button onClick={() => { setSelectedReg(null); setDeleteConfirm(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-muted)", padding: 4 }}>
-								<IconX size={20} />
-							</button>
+					{/* Fixed header */}
+					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--spacing-md) var(--spacing-lg)", borderBottom: "1px solid var(--color-hairline-soft)", flexShrink: 0 }}>
+						<div>
+							<h3 style={{ fontSize: 18, margin: 0 }}>{parseName(selectedReg)}</h3>
+							<span style={{ fontSize: 12, color: "var(--color-muted)" }}>{getTypeLabel(selectedReg.type, typeLabels)}</span>
 						</div>
+						<button onClick={() => { setSelectedReg(null); setDeleteConfirm(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-muted)", padding: 4 }}>
+							<IconX size={20} />
+						</button>
+					</div>
+					{/* Scrollable body */}
+					<div style={{ flex: 1, overflowY: "auto", padding: "var(--spacing-lg)" }}>
 						<DetailData data_json={selectedReg.data_json} type={selectedReg.type} />
 						<div style={{ marginTop: "var(--spacing-lg)", fontSize: 13, color: "var(--color-muted)" }}>
 							<p style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -280,44 +283,42 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 								) : "ยังไม่เช็คอิน"}
 							</p>
 						</div>
-
-						{/* Footer: delete (left) + prev/next (right) */}
-						{(() => {
-							const idx = registrants.findIndex((r) => r.id === selectedReg.id);
-							const hasPrev = idx > 0;
-							const hasNext = idx < registrants.length - 1;
-							return (
-								<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--spacing-lg)", paddingTop: "var(--spacing-md)", borderTop: "1px solid var(--color-hairline-soft)", gap: 8 }}>
-									{/* Delete */}
-									<div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-sm)" }}>
-										{role === "super_admin" && (deleteConfirm ? (
-											<>
-												<span style={{ fontSize: 13, color: "var(--color-error)", fontWeight: 500 }}>ยืนยันลบ?</span>
-												<button className="btn btn-sm" style={{ background: "var(--color-error)", color: "white", border: "none" }} disabled={deleting} onClick={() => handleDelete(selectedReg.id)}>
-													{deleting ? "กำลังลบ..." : "ยืนยัน"}
-												</button>
-												<button className="btn btn-sm btn-ghost" onClick={() => setDeleteConfirm(false)}>ยกเลิก</button>
-											</>
-										) : (
-											<button style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: "pointer", padding: "6px 10px", color: "var(--color-error)", display: "flex", alignItems: "center" }} onClick={() => setDeleteConfirm(true)} title="ลบการลงทะเบียน">
-												<IconTrash size={16} />
+					</div>{/* end scrollable */}
+					{/* Sticky footer */}
+					{(() => {
+						const idx = registrants.findIndex((r) => r.id === selectedReg.id);
+						const hasPrev = idx > 0;
+						const hasNext = idx < registrants.length - 1;
+						return (
+							<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--spacing-md) var(--spacing-lg)", borderTop: "1px solid var(--color-hairline-soft)", background: "var(--color-bg)", flexShrink: 0, gap: 8 }}>
+								<div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-sm)" }}>
+									{role === "super_admin" && (deleteConfirm ? (
+										<>
+											<span style={{ fontSize: 13, color: "var(--color-error)", fontWeight: 500 }}>ยืนยันลบ?</span>
+											<button className="btn btn-sm" style={{ background: "var(--color-error)", color: "white", border: "none" }} disabled={deleting} onClick={() => handleDelete(selectedReg.id)}>
+												{deleting ? "กำลังลบ..." : "ยืนยัน"}
 											</button>
-										))}
-									</div>
-									{/* Prev / Next */}
-									<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-										<span style={{ fontSize: 12, color: "var(--color-muted)" }}>{idx + 1} / {registrants.length}</span>
-										<button onClick={() => { setDeleteConfirm(false); setSelectedReg(registrants[idx - 1]); }} disabled={!hasPrev} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: hasPrev ? "pointer" : "default", padding: "6px 10px", opacity: hasPrev ? 1 : 0.3, display: "flex", alignItems: "center" }}>
-											<IconArrowLeft size={16} />
+											<button className="btn btn-sm btn-ghost" onClick={() => setDeleteConfirm(false)}>ยกเลิก</button>
+										</>
+									) : (
+										<button style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: "pointer", padding: "6px 10px", color: "var(--color-error)", display: "flex", alignItems: "center" }} onClick={() => setDeleteConfirm(true)} title="ลบการลงทะเบียน">
+											<IconTrash size={16} />
 										</button>
-										<button onClick={() => { setDeleteConfirm(false); setSelectedReg(registrants[idx + 1]); }} disabled={!hasNext} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: hasNext ? "pointer" : "default", padding: "6px 10px", opacity: hasNext ? 1 : 0.3, display: "flex", alignItems: "center" }}>
-											<IconArrowRight size={16} />
-										</button>
-									</div>
+									))}
 								</div>
-							);
-						})()}
-					</div>
+								<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+									<span style={{ fontSize: 12, color: "var(--color-muted)" }}>{idx + 1} / {registrants.length}</span>
+									<button onClick={() => { setDeleteConfirm(false); setSelectedReg(registrants[idx - 1]); }} disabled={!hasPrev} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: hasPrev ? "pointer" : "default", padding: "6px 10px", opacity: hasPrev ? 1 : 0.3, display: "flex", alignItems: "center" }}>
+										<IconArrowLeft size={16} />
+									</button>
+									<button onClick={() => { setDeleteConfirm(false); setSelectedReg(registrants[idx + 1]); }} disabled={!hasNext} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: hasNext ? "pointer" : "default", padding: "6px 10px", opacity: hasNext ? 1 : 0.3, display: "flex", alignItems: "center" }}>
+										<IconArrowRight size={16} />
+									</button>
+								</div>
+							</div>
+						);
+					})()}
+				</div>
 				</div>
 			)}
 		</div>

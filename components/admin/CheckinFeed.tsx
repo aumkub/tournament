@@ -45,44 +45,28 @@ export function CheckinFeed({ slug }: CheckinFeedProps) {
 
 	if (events.length === 0) {
 		return (
-			<div className="card" style={{ textAlign: "center", color: "var(--color-muted)", fontSize: 14 }}>
+			<div className="card text-center text-muted text-sm">
 				ยังไม่มีการเช็คอินแบบเรียลไทม์
 			</div>
 		);
 	}
 
 	return (
-		<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-xs)" }}>
-			<h3 style={{ fontSize: 16, marginBottom: "var(--spacing-sm)", fontFamily: "var(--font-serif)" }}>
+		<div className="flex flex-col gap-xs">
+			<h3 className="text-sm mb-sm font-serif">
 				Live Check-in Feed
 			</h3>
 			{events.map((evt, i) => (
 				<div
 					key={`${evt.checked_in_at}-${i}`}
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: "var(--spacing-md)",
-						padding: "var(--spacing-sm) var(--spacing-md)",
-						background: i === 0 ? "var(--color-surface-card)" : "transparent",
-						borderRadius: "var(--radius-md)",
-						transition: "background 0.3s",
-					}}
+					className={`flex items-center gap-md p-sm p-md rounded-md transition-colors ${i === 0 ? "bg-surface-card" : "bg-transparent"}`}
 				>
-					<span
-						style={{
-							width: 8,
-							height: 8,
-							borderRadius: "50%",
-							background: "var(--color-success)",
-							flexShrink: 0,
-						}}
-					/>
-					<span style={{ fontSize: 14, color: "var(--color-ink)", fontWeight: 500 }}>{evt.name}</span>
-					<span className="badge-pill" style={{ fontSize: 11 }}>
+					<span className="w-2 h-2 rounded-full bg-success flex-shrink-0" />
+					<span className="text-sm text-ink font-medium">{evt.name}</span>
+					<span className="badge-pill text-[11px]">
 						{evt.registration_type === "competitor" ? "ผู้เข้าแข่งขัน" : "ผู้เข้าร่วมงาน"}
 					</span>
-					<span style={{ fontSize: 12, color: "var(--color-muted)", marginLeft: "auto" }}>
+					<span className="text-xs text-muted ml-auto">
 						{new Date(evt.checked_in_at).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" })}
 					</span>
 				</div>

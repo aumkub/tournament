@@ -54,72 +54,66 @@ export function meta({ data }: Route.MetaArgs) {
 
 export default function SuccessPage({ loaderData }: Route.ComponentProps) {
 	return (
-		<div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
+		<div className="min-h-screen bg-canvas">
 			{/* Cover Banner */}
-			<div style={{ width: "100%", aspectRatio: "16/7", maxHeight: 280, overflow: "hidden", position: "relative", background: "#f5f0e8" }}>
+			<div className="w-full relative overflow-hidden" style={{ aspectRatio: "16/7", maxHeight: 280, background: "var(--color-surface-soft)" }}>
 				{loaderData.coverUrl ? (
-					<img src={loaderData.coverUrl} alt={loaderData.tournamentName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+					<img src={loaderData.coverUrl} alt={loaderData.tournamentName} className="w-full h-full object-cover" />
 				) : (
-					<div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: "#8e8b82" }}>
-						<IconCamera size={36} color="#8e8b82" />
+					<div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ color: "var(--color-muted-soft)" }}>
+						<IconCamera size={36} color="var(--color-muted-soft)" />
 					</div>
 				)}
-				<div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "var(--spacing-lg)", background: "linear-gradient(transparent, rgba(20,20,19,0.72))" }}>
-					<h1 style={{ fontSize: 22, color: "white", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
+				<div className="absolute bottom-0 left-0 right-0 p-lg" style={{ background: "linear-gradient(transparent, rgba(20,20,19,0.72))" }}>
+					<h1 className="text-[22px] text-white m-0" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
 						{loaderData.tournamentName}
 					</h1>
 				</div>
 			</div>
 
 			{/* Content */}
-			<div style={{ maxWidth: 480, margin: "0 auto", padding: "var(--spacing-xl) var(--spacing-lg)" }}>
+			<div className="max-w-[480px] mx-auto px-xl p-lg">
 
 				{/* Success header */}
-				<div style={{ textAlign: "center", marginBottom: "var(--spacing-xl)" }}>
-					<div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 64, height: 64, borderRadius: "50%", background: "#f0fdf4", marginBottom: "var(--spacing-md)" }}>
+				<div className="text-center mb-xl">
+					<div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#f0fdf4] mb-md">
 						<IconPartyPopper size={32} color="var(--color-success)" />
 					</div>
-					<h2 style={{ fontSize: 26, fontWeight: 700, margin: "0 0 6px" }}>ลงทะเบียนสำเร็จ!</h2>
-					<p style={{ fontSize: 14, color: "var(--color-muted)", margin: 0 }}>กรุณาบันทึก QR Code ด้านล่างเพื่อใช้เช็คอินวันงาน</p>
+					<h2 className="text-[26px] font-bold m-0 mb-1.5">ลงทะเบียนสำเร็จ!</h2>
+					<p className="text-sm text-muted m-0">กรุณาบันทึก QR Code ด้านล่างเพื่อใช้เช็คอินวันงาน</p>
 				</div>
 
 				{/* Card */}
-				<div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: "var(--spacing-lg)" }}>
+				<div className="card p-0 overflow-hidden mb-lg">
 					{/* Name + type */}
-					<div style={{ padding: "var(--spacing-lg) var(--spacing-lg) var(--spacing-md)", borderBottom: "1px solid var(--color-hairline-soft)" }}>
-						<span className="badge-pill" style={{ fontSize: 12, marginBottom: 8, display: "inline-block" }}>
+					<div className="p-lg p-lg p-md border-b border-hairline-soft">
+						<span className="badge-pill text-[12px] mb-2 inline-block">
 							{loaderData.typeLabel}
 						</span>
-						<p style={{ fontSize: 20, fontWeight: 600, color: "var(--color-ink)", margin: 0 }}>
+						<p className="text-[20px] font-semibold text-ink m-0">
 							{loaderData.name || "—"}
 						</p>
 					</div>
 
 					{/* QR Code */}
-					<div style={{ padding: "var(--spacing-xl)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--spacing-md)", background: "var(--color-surface-soft)" }}>
-						<div style={{
-							background: "white",
-							borderRadius: "var(--radius-lg)",
-							padding: 16,
-							boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-							display: "inline-block",
-						}}>
-							<img src={loaderData.qrDataUrl} alt="QR Code" style={{ width: 200, height: 200, display: "block" }} />
+					<div className="p-xl flex flex-col items-center gap-md bg-surface-soft">
+						<div className="bg-white rounded-lg p-4 shadow inline-block">
+							<img src={loaderData.qrDataUrl} alt="QR Code" className="w-[200px] h-[200px] block" />
 						</div>
-						<p style={{ fontSize: 13, color: "var(--color-muted)", margin: 0, textAlign: "center" }}>
+						<p className="text-xs text-muted m-0 text-center">
 							แสดง QR Code นี้ที่จุดเช็คอิน
 						</p>
 					</div>
 
 					{/* Registration ID */}
-					<div style={{ padding: "var(--spacing-md) var(--spacing-lg)", borderTop: "1px solid var(--color-hairline-soft)", display: "flex", alignItems: "center", gap: 8 }}>
+					<div className="p-md p-lg border-t border-hairline-soft flex items-center gap-2">
 						<IconCheckCircle size={14} color="var(--color-success)" />
-						<span style={{ fontSize: 12, color: "var(--color-muted)" }}>รหัสการลงทะเบียน:</span>
-						<span style={{ fontSize: 12, fontFamily: "monospace", color: "var(--color-body)", userSelect: "all" }}>{loaderData.id}</span>
+						<span className="text-xs text-muted">รหัสการลงทะเบียน:</span>
+						<span className="text-xs font-mono text-body select-all">{loaderData.id}</span>
 					</div>
 				</div>
 
-				<p style={{ fontSize: 13, color: "var(--color-muted)", textAlign: "center" }}>
+				<p className="text-xs text-muted text-center">
 					ระบบได้ส่งอีเมลยืนยันไปที่อีเมลที่ลงทะเบียนแล้ว
 				</p>
 			</div>

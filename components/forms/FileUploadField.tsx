@@ -73,10 +73,10 @@ export function FileUploadField({
 	);
 
 	return (
-		<div style={{ marginBottom: "var(--spacing-lg)" }}>
+		<div className="mb-lg">
 			<label className="label">{label}</label>
 			{hint && (
-				<p style={{ fontSize: 13, color: "var(--color-muted)", marginBottom: "var(--spacing-xs)", marginTop: 2 }}>
+				<p className="text-xs text-muted mb-xs mt-0.5">
 					{hint}
 				</p>
 			)}
@@ -86,13 +86,13 @@ export function FileUploadField({
 				style={{ cursor: uploading ? "wait" : "pointer" }}
 			>
 				{uploading ? (
-					<p style={{ color: "var(--color-muted)" }}>กำลังอัพโหลด...</p>
+					<p className="text-muted">กำลังอัพโหลด...</p>
 				) : fileName ? (
-					<p style={{ color: "var(--color-success)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+					<p className="text-success flex items-center justify-center gap-1.5">
 						<IconCheck size={16} color="var(--color-success)" /> {fileName}
 					</p>
 				) : (
-					<p style={{ color: "var(--color-muted)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+					<p className="text-muted flex items-center justify-center gap-1.5">
 						<IconUpload size={16} /> คลิกเพื่อเลือกไฟล์ (สูงสุด {maxSizeMB}MB)
 					</p>
 				)}
@@ -102,11 +102,11 @@ export function FileUploadField({
 				type="file"
 				accept={accept}
 				onChange={handleUpload}
-				style={{ display: "none" }}
+				className="hidden"
 				multiple={multiple}
 			/>
 			{error && (
-				<p style={{ color: "var(--color-error)", fontSize: 13, marginTop: 4 }}>
+				<p className="text-error text-xs mt-1">
 					{error}
 				</p>
 			)}
