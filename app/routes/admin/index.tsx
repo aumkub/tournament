@@ -4,10 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import {
 	IconLock,
 	IconPlus,
-	IconArrowRight,
 	IconX,
-	IconCheck,
-	IconCamera,
 } from "../../../components/ui/icons";
 import type { Role } from "../../../types/registration";
 
@@ -17,7 +14,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	const session = await verifySession(env.SESSIONS, token || "");
 
 	const results = await env.DB.prepare(
-		"SELECT id, name, slug, photo_url, created_at FROM tournaments ORDER BY created_at DESC",
+		`SELECT t.id, t.name, t.slug, t.photo_url, t.created_at,
+			t.registration_open_at, t.registration_close_at,
+			t.checkin_open_at, t.checkin_close_at,
+			COUNT(r.id) as registration_count,
+			SUM(CASE WHEN r.checked_in = 1 THEN 1 ELSE 0 END) as checkin_count
+		FROM tournaments t
+		LEFT JOIN registrations r ON r.tournament_id = t.id
+		GROUP BY t.id
+		ORDER BY t.created_at DESC`,
 	).all();
 
 	const turnstileSiteKey = (env as any).TURNSTILE_SITE_KEY || "";
@@ -300,6 +305,78 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 	// ─── Authenticated view ──────────────────────
 	const role = loaderData.role as Role;
 	const isSuperAdmin = role === "super_admin";
+
+	const fmtDate = (ts: number | null) => {
+		if (!ts) return "—";
+		return new Date(ts).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
+	};
+
+	const periodStatus = (openAt: number | null, closeAt: number | null): "upcoming" | "open" | "closed" | "none" => {
+		if (!openAt || !closeAt) return "none";
+		const now = Date.now();
+		if (now < openAt) return "upcoming";
+		if (now > closeAt) return "closed";
+		return "open";
+	};
+
+	const StatusDot = ({ status }: { status: "upcoming" | "open" | "closed" | "none" }) => {
+		if (status === "none") return null;
+		const colors = { open: "#16a34a", upcoming: "#ca8a04", closed: "#dc2626" };
+		return <span style={{ width: 7, height: 7, borderRadius: "50%", background: colors[status], display: "inline-block", flexShrink: 0 }} />;
+	};
+
+	const TournamentCard = ({ t, href }: { t: any; href: string }) => {
+		const coverUrl = t.photo_url ? `/api/file?key=${encodeURIComponent(t.photo_url)}` : null;
+		const regStatus = periodStatus(t.registration_open_at, t.registration_close_at);
+		const checkinStatus = periodStatus(t.checkin_open_at, t.checkin_close_at);
+		const regCount = t.registration_count ?? 0;
+		const checkinCount = t.checkin_count ?? 0;
+		const statusLabel = { open: "เปิด", upcoming: "เร็วๆ นี้", closed: "ปิด", none: "" } as const;
+		const statusColor = { open: "#16a34a", upcoming: "#ca8a04", closed: "#9ca3af", none: "#9ca3af" } as const;
+
+		return (
+			<a href={href} className="card !p-0 flex flex-col overflow-hidden no-underline group transition-all hover:shadow-lg">
+				{/* 16/9 cover with gradient overlay */}
+				<div className="relative w-full flex-shrink-0 overflow-hidden" style={{ aspectRatio: "16/9", background: "var(--color-surface-soft)" }}>
+					{coverUrl
+						? <img src={coverUrl} alt={t.name} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" style={{ transitionDuration: "400ms" }} />
+						: <div className="w-full h-full flex items-center justify-center text-[40px] font-black select-none" style={{ color: "var(--color-muted-soft)" }}>{t.name.charAt(0).toUpperCase()}</div>
+					}
+					{/* Bottom gradient + title overlay */}
+					<div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)" }} />
+					<div className="absolute bottom-0 left-0 right-0 px-md pb-sm pt-lg flex items-end justify-between gap-sm">
+						<span className="text-white font-semibold !text-base leading-snug line-clamp-2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{t.name}</span>
+						{/* Count chips */}
+						<div className="flex-shrink-0 flex gap-xs">
+							<span className="flex items-center gap-1 px-2 py-0.5 rounded-full !text-xs font-semibold" style={{ background: "rgba(255,255,255,0.18)", color: "#fff", backdropFilter: "blur(4px)" }}>
+								{regCount} <span style={{ opacity: 0.75 }}>ลง</span>
+							</span>
+							<span className="flex items-center gap-1 px-2 py-0.5 rounded-full !text-xs font-semibold" style={{ background: "rgba(22,163,74,0.55)", color: "#fff", backdropFilter: "blur(4px)" }}>
+								{checkinCount} <span style={{ opacity: 0.75 }}>เช็ค</span>
+							</span>
+						</div>
+					</div>
+				</div>
+
+				{/* Period info */}
+				<div className="px-md py-sm grid gap-xs text-sm" style={{ gridTemplateColumns: "1fr 1fr" }}>
+					{[
+						{ label: "ลงทะเบียน", status: regStatus, open: t.registration_open_at, close: t.registration_close_at },
+						{ label: "เช็คอิน", status: checkinStatus, open: t.checkin_open_at, close: t.checkin_close_at },
+					].map(({ label, status, open, close }) => (
+						<div key={label} className="flex flex-col gap-0.5">
+							<div className="flex items-center gap-1">
+								<span className="text-xs font-medium text-body">{label}</span>
+								<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: statusColor[status] + "20", color: statusColor[status] }}>{statusLabel[status]}</span>
+							</div>
+							<span className="text-[11px] text-muted leading-tight">เริ่ม: {fmtDate(open)}</span>
+							<span className="text-[11px] text-muted leading-tight">สิ้นสุด: {fmtDate(close)}</span>
+						</div>
+					))}
+				</div>
+			</a>
+		);
+	};
 	const sessionTournament = tournaments.find((t: any) => t.id === loaderData.tournamentId);
 
 	return (
@@ -329,60 +406,17 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						</button>
 					</div>
 				) : (
-					<div className="grid gap-lg" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
-						{tournaments.map((t: any) => {
-							const coverUrl = t.photo_url ? `/api/file?key=${encodeURIComponent(t.photo_url)}` : null;
-							return (
-								<a
-									key={t.id}
-									href={`/portal/${t.slug}`}
-									className="card !p-0 flex flex-col overflow-hidden no-underline transition-shadow"
-								>
-									<div className="w-full overflow-hidden" style={{ aspectRatio: "16/7", background: "var(--color-surface-soft)" }}>
-										{coverUrl ? (
-											<img src={coverUrl} alt={t.name} className="w-full h-full object-cover" />
-										) : (
-											<div className="w-full h-full flex items-center justify-center" style={{ color: "var(--color-muted-soft)" }}>
-												<IconCamera size={28} color="var(--color-muted-soft)" />
-											</div>
-										)}
-									</div>
-									<div className="p-md p-lg">
-										<h3 className="!text-[18px] mb-1 text-ink">{t.name}</h3>
-										<p className="text-sm text-muted mt-1">slug: {t.slug}</p>
-									</div>
-								</a>
-							);
-						})}
+					<div className="grid gap-sm" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
+						{tournaments.map((t: any) => (
+							<TournamentCard key={t.id} t={t} href={`/portal/${t.slug}`} />
+						))}
 					</div>
 				)
 			) : (
-				<div className="grid gap-lg" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
-					{sessionTournament ? (() => {
-						const coverUrl = sessionTournament.photo_url ? `/api/file?key=${encodeURIComponent(sessionTournament.photo_url)}` : null;
-						return (
-							<a
-								href={`/portal/${sessionTournament.slug}`}
-								className="card p-0 flex flex-col overflow-hidden no-underline transition-shadow"
-							>
-								<div className="w-full overflow-hidden" style={{ aspectRatio: "16/7", background: "var(--color-surface-soft)" }}>
-									{coverUrl ? (
-										<img src={coverUrl} alt={sessionTournament.name} className="w-full h-full object-cover" />
-									) : (
-										<div className="w-full h-full flex items-center justify-center" style={{ color: "var(--color-muted-soft)" }}>
-											<IconCamera size={28} color="var(--color-muted-soft)" />
-										</div>
-									)}
-								</div>
-								<div className="p-md p-lg">
-									<h3 className="text-[18px] mb-1 text-ink">{sessionTournament.name}</h3>
-									<p className="text-sm text-muted m-0">
-										<IconArrowRight size={14} /> เข้าสู่ Dashboard
-									</p>
-								</div>
-							</a>
-						);
-					})() : (
+				<div className="grid gap-sm" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
+					{sessionTournament ? (
+						<TournamentCard t={sessionTournament} href={`/portal/${sessionTournament.slug}`} />
+					) : (
 						<div className="card text-center text-muted">
 							ไม่พบทัวร์นาเมนต์ของคุณ — กรุณาเข้าสู่ระบบใหม่
 						</div>
