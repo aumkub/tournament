@@ -5,7 +5,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
 	const token = parseCookie(request.headers.get("Cookie"));
 	const session = await verifySession(env.SESSIONS, token || "");
-	if (!session || !hasRole(session, "admin")) {
+	if (!session || !hasRole(session, "assistant")) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 

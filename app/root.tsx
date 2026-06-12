@@ -25,7 +25,7 @@ export const links: Route.LinksFunction = () => [
 	},
 	{
 		rel: "stylesheet",
-		href: "https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap",
+		href: "https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Noto+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap",
 	},
 ];
 
@@ -38,15 +38,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	const session = await verifySession(env.SESSIONS, token);
 	if (!session) return { authenticated: false, role: null, backendUrl: null };
 
-	let backendUrl = "/admin";
+	let backendUrl = "/portal";
 	if (session.role !== "super_admin" && session.tournamentId) {
 		const t = await env.DB.prepare("SELECT slug FROM tournaments WHERE id = ?")
 			.bind(session.tournamentId)
 			.first();
 		if (t) {
 			backendUrl = session.role === "assistant"
-				? `/admin/${t.slug}/checkin`
-				: `/admin/${t.slug}`;
+				? `/portal/${t.slug}/checkin`
+				: `/portal/${t.slug}`;
 		}
 	}
 
@@ -104,7 +104,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 		<main style={{ padding: "var(--spacing-section) var(--spacing-lg)", maxWidth: 640, margin: "0 auto", textAlign: "center" }}>
 			<h1 style={{ fontSize: 48, fontFamily: "var(--font-serif)" }}>{message}</h1>
 			<p style={{ color: "var(--color-body)", fontSize: 16 }}>{details}</p>
-			<a href="/" className="btn btn-primary" style={{ textDecoration: "none", marginTop: "var(--spacing-lg)", display: "inline-block", lineHeight: "40px" }}>
+			<a href="/" className="btn btn-primary" style={{ textDecoration: "none", marginTop: "var(--spacing-lg)", display: "inline-block"}}>
 				กลับหน้าหลัก
 			</a>
 			{stack && (

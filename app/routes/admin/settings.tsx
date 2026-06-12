@@ -19,10 +19,11 @@ import {
 	ImageIcon,
 	IconUser,
 	IconUsers,
+	IconAlertTriangle,
 } from "../../../components/ui/icons";
 import { AdminNav } from "../../../components/admin/AdminNav";
 
-type Tab = "general" | "schedule" | "registration" | "passwords" | "email";
+type Tab = "general" | "schedule" | "registration" | "passwords" | "email" | "reset";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
@@ -182,7 +183,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			setCoverFile(null);
 			setMessage({ ok: true, text: "บันทึกสำเร็จ" });
 			if (form.slug && form.slug !== t.slug) {
-				window.location.href = `/admin/${form.slug}/settings`;
+				window.location.href = `/portal/${form.slug}/settings`;
 			}
 		} catch (err: any) {
 			setMessage({ ok: false, text: err.message });
@@ -197,7 +198,41 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 		{ id: "registration", label: "ลงทะเบียน & ฟอร์ม", icon: <IconLink size={16} /> },
 		{ id: "passwords", label: "รหัสผ่าน", icon: <IconKey size={16} /> },
 		{ id: "email", label: "อีเมล", icon: <IconMail size={16} /> },
+		{ id: "reset", label: "ล้างค่า", icon: <IconAlertTriangle size={16} /> },
 	];
+
+	// Reset tab state
+	const [resetRegConfirm, setResetRegConfirm] = useState("");
+	const [resetCheckinConfirm, setResetCheckinConfirm] = useState("");
+	const [resetRegLoading, setResetRegLoading] = useState(false);
+	const [resetCheckinLoading, setResetCheckinLoading] = useState(false);
+	const [resetMessage, setResetMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+	const handleClearRegistrations = async () => {
+		if (resetRegConfirm !== "ยืนยันการลบ") return;
+		setResetRegLoading(true);
+		setResetMessage(null);
+		try {
+			const res = await fetch(`/api/admin/${t.slug}/clear-registrations`, { method: "POST" });
+			const json = await res.json() as { ok?: boolean; error?: string };
+			setResetMessage(json.ok ? { ok: true, text: "ลบข้อมูลการลงทะเบียนและไฟล์แนบทั้งหมดแล้ว" } : { ok: false, text: json.error ?? "เกิดข้อผิดพลาด" });
+			if (json.ok) setResetRegConfirm("");
+		} catch { setResetMessage({ ok: false, text: "เกิดข้อผิดพลาด" }); }
+		setResetRegLoading(false);
+	};
+
+	const handleClearCheckins = async () => {
+		if (resetCheckinConfirm !== "ยืนยันการลบ") return;
+		setResetCheckinLoading(true);
+		setResetMessage(null);
+		try {
+			const res = await fetch(`/api/admin/${t.slug}/clear-checkins`, { method: "POST" });
+			const json = await res.json() as { ok?: boolean; error?: string };
+			setResetMessage(json.ok ? { ok: true, text: "รีเซ็ตการเช็คอินทั้งหมดแล้ว" } : { ok: false, text: json.error ?? "เกิดข้อผิดพลาด" });
+			if (json.ok) setResetCheckinConfirm("");
+		} catch { setResetMessage({ ok: false, text: "เกิดข้อผิดพลาด" }); }
+		setResetCheckinLoading(false);
+	};
 
 	return (
 		<>
@@ -232,14 +267,16 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			)}
 
 			{/* Tabs */}
-			<div role="tablist" className="tabs tabs-bordered" style={{ marginBottom: "var(--spacing-lg)" }}>
+			<div className="flex gap-1 mb-lg border-b border-hairline overflow-x-auto">
 				{tabs.map((tab) => (
 					<button
 						key={tab.id}
-						role="tab"
-						className={"tab" + (activeTab === tab.id ? " tab-active" : "")}
-						style={{ gap: 6, fontSize: 14, fontWeight: activeTab === tab.id ? 600 : 400 }}
 						onClick={() => setActiveTab(tab.id)}
+						className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors bg-transparent border-x-0 border-t-0 cursor-pointer ${
+							activeTab === tab.id
+								? "border-b-primary text-primary"
+								: "border-b-transparent text-muted hover:text-body hover:border-b-hairline"
+						}`}
 					>
 						{tab.icon} {tab.label}
 					</button>
@@ -371,36 +408,32 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 				<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
 
 					{/* ── Test Mode ── */}
-					<div className="card" style={{ borderColor: testMode ? "#f59e0b" : undefined, background: testMode ? "#fffbeb" : undefined }}>
-						<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--spacing-md)" }}>
+					<div className={`card flex items-center justify-between gap-md transition-colors ${testMode ? "border-warning bg-[#fffbeb]" : ""}`}>
+						<div className="flex items-center gap-3 min-w-0">
+							<div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${testMode ? "bg-warning/15" : "bg-surface-soft"}`}>
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={testMode ? "#d4a017" : "var(--color-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/>
+								</svg>
+							</div>
 							<div>
-								<h2 style={{ fontSize: 18, margin: 0 }}>โหมดทดสอบ</h2>
-								<p style={{ fontSize: 13, color: testMode ? "#92400e" : "var(--color-muted)", margin: "4px 0 0" }}>
-									{testMode ? "⚠️ เปิดอยู่ — ปุ่มกรอกข้อมูลอัตโนมัติแสดงในฟอร์มลงทะเบียน" : "ปิดอยู่ — ผู้ใช้จะไม่เห็นปุ่มทดสอบ"}
+								<p className="text-sm font-semibold text-ink m-0">โหมดทดสอบ</p>
+								<p className={`text-xs m-0 mt-0.5 ${testMode ? "text-[#92400e]" : "text-muted"}`}>
+									{testMode
+										? "เปิดอยู่ — ปุ่มกรอกข้อมูลอัตโนมัติ + demo scenarios แสดงในฟอร์ม"
+										: "ปิดอยู่ — ผู้ใช้จะไม่เห็นฟีเจอร์ทดสอบ"}
 								</p>
 							</div>
-							<label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", flexShrink: 0 }}>
-								<span style={{ fontSize: 13, fontWeight: 500, color: testMode ? "#92400e" : "var(--color-muted)" }}>
-									{testMode ? "เปิด" : "ปิด"}
-								</span>
-								<div
-									onClick={() => setTestMode((v) => !v)}
-									style={{
-										width: 44, height: 24, borderRadius: 12,
-										background: testMode ? "#f59e0b" : "var(--color-border)",
-										position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0,
-									}}
-								>
-									<div style={{
-										position: "absolute", top: 2,
-										left: testMode ? 22 : 2,
-										width: 20, height: 20, borderRadius: "50%",
-										background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-										transition: "left 0.2s",
-									}} />
-								</div>
-							</label>
 						</div>
+
+						<button
+							type="button"
+							role="switch"
+							aria-checked={testMode}
+							onClick={() => setTestMode((v) => !v)}
+							className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none border-0 cursor-pointer ${testMode ? "bg-warning" : "bg-hairline"}`}
+						>
+							<span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${testMode ? "left-[22px]" : "left-0.5"}`} />
+						</button>
 					</div>
 
 					{/* ── ผู้เข้าแข่งขัน card ── */}
@@ -636,6 +669,73 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 							</div>
 						);
 					})}
+				</div>
+			)}
+			{/* ── Tab: Reset ────────────────────────────── */}
+			{activeTab === "reset" && (
+				<div className="flex flex-col gap-lg">
+					{resetMessage && (
+						<div className={`flex items-center gap-2 px-md py-sm rounded-lg border text-sm ${resetMessage.ok ? "bg-[#f0fdf4] border-success text-success" : "bg-[#fef2f2] border-error text-error"}`}>
+							{resetMessage.ok ? <IconCheck size={14} color="var(--color-success)" /> : <IconX size={14} color="var(--color-error)" />}
+							{resetMessage.text}
+						</div>
+					)}
+
+					{/* Clear registrations */}
+					<div className="card border-2 border-error/30">
+						<div className="flex items-start gap-3 mb-md">
+							<div className="flex-shrink-0 w-9 h-9 rounded-lg bg-error/10 flex items-center justify-center mt-0.5">
+								<IconAlertTriangle size={16} color="var(--color-error)" />
+							</div>
+							<div>
+								<h3 className="text-base font-semibold text-ink m-0 mb-1">ล้างข้อมูลการลงทะเบียน</h3>
+								<p className="text-sm text-muted m-0">ลบข้อมูลผู้ลงทะเบียนทั้งหมดและไฟล์แนบ (รูปภาพ, เอกสาร) ออกจากระบบ การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+							</div>
+						</div>
+						<label className="label text-sm">พิมพ์ <strong>ยืนยันการลบ</strong> เพื่อยืนยัน</label>
+						<input
+							className="input mb-md"
+							value={resetRegConfirm}
+							onChange={(e) => setResetRegConfirm(e.target.value)}
+							placeholder="ยืนยันการลบ"
+						/>
+						<button
+							className="btn"
+							style={{ background: "var(--color-error)", color: "#fff", opacity: resetRegConfirm === "ยืนยันการลบ" ? 1 : 0.4, cursor: resetRegConfirm === "ยืนยันการลบ" ? "pointer" : "not-allowed" }}
+							disabled={resetRegConfirm !== "ยืนยันการลบ" || resetRegLoading}
+							onClick={handleClearRegistrations}
+						>
+							{resetRegLoading ? "กำลังลบ..." : "ลบข้อมูลการลงทะเบียนทั้งหมด"}
+						</button>
+					</div>
+
+					{/* Clear check-ins */}
+					<div className="card border-2 border-amber-400/40">
+						<div className="flex items-start gap-3 mb-md">
+							<div className="flex-shrink-0 w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center mt-0.5">
+								<IconAlertTriangle size={16} color="#d97706" />
+							</div>
+							<div>
+								<h3 className="text-base font-semibold text-ink m-0 mb-1">ล้างข้อมูลการเช็คอิน</h3>
+								<p className="text-sm text-muted m-0">รีเซ็ตสถานะเช็คอินของผู้ลงทะเบียนทั้งหมดกลับเป็นยังไม่ได้เช็คอิน ข้อมูลการลงทะเบียนยังคงอยู่</p>
+							</div>
+						</div>
+						<label className="label text-sm">พิมพ์ <strong>ยืนยันการลบ</strong> เพื่อยืนยัน</label>
+						<input
+							className="input mb-md"
+							value={resetCheckinConfirm}
+							onChange={(e) => setResetCheckinConfirm(e.target.value)}
+							placeholder="ยืนยันการลบ"
+						/>
+						<button
+							className="btn"
+							style={{ background: "#d97706", color: "#fff", opacity: resetCheckinConfirm === "ยืนยันการลบ" ? 1 : 0.4, cursor: resetCheckinConfirm === "ยืนยันการลบ" ? "pointer" : "not-allowed" }}
+							disabled={resetCheckinConfirm !== "ยืนยันการลบ" || resetCheckinLoading}
+							onClick={handleClearCheckins}
+						>
+							{resetCheckinLoading ? "กำลังรีเซ็ต..." : "รีเซ็ตการเช็คอินทั้งหมด"}
+						</button>
+					</div>
 				</div>
 			)}
 		</div>

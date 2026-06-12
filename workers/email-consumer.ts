@@ -76,7 +76,7 @@ export default {
 					checkin_close_date: new Date(
 						tournament.checkin_close_at as number,
 					).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }),
-					qr_code_image: generateQRCodeImageHTML(reg.qr_code_token as string),
+					qr_code_image: generateQRCodeImageHTML(registrationId),
 					submission_id: registrationId,
 				});
 

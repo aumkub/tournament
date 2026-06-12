@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { Route } from "./+types/register/register";
 import { CompetitorForm } from "../../../components/forms/CompetitorForm";
 import { AttendeeForm } from "../../../components/forms/AttendeeForm";
@@ -5,6 +6,38 @@ import { DynamicMultiStepForm } from "../../../components/forms/DynamicMultiStep
 import { IconClock, IconCamera } from "../../../components/ui/icons";
 import { FORM_CONFIGS, getFormConfigBySlug } from "../../../lib/form-configs/index";
 import type { FormConfig } from "../../../types/form-config";
+
+type Lang = "th" | "en";
+
+function FlagTH({ size = 24 }: { size?: number }) {
+	return (
+		<svg width={size} height={size * 2 / 3} viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+			<rect width="900" height="600" fill="#A51931"/>
+			<rect y="100" width="900" height="400" fill="#F4F5F8"/>
+			<rect y="200" width="900" height="200" fill="#2D2A4A"/>
+		</svg>
+	);
+}
+
+function FlagGB({ size = 24 }: { size?: number }) {
+	const w = size;
+	const h = size * 2 / 3;
+	return (
+		<svg width={w} height={h} viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+			<rect width="60" height="40" fill="#012169"/>
+			{/* Diagonals white */}
+			<path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" strokeWidth="8"/>
+			{/* Diagonals red */}
+			<path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="4"/>
+			{/* Cross white */}
+			<rect x="25" width="10" height="40" fill="#fff"/>
+			<rect y="15" width="60" height="10" fill="#fff"/>
+			{/* Cross red */}
+			<rect x="27" width="6" height="40" fill="#C8102E"/>
+			<rect y="17" width="60" height="6" fill="#C8102E"/>
+		</svg>
+	);
+}
 
 export async function loader({ params, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
@@ -92,8 +125,22 @@ export function meta({ data }: Route.MetaArgs) {
 	];
 }
 
+const LANG_KEY = "register_lang";
+
 export default function RegisterPage({ loaderData }: Route.ComponentProps) {
+	const [lang, setLang] = useState<Lang | null>(null);
 	const now = Date.now();
+
+	// Restore saved language on mount
+	useEffect(() => {
+		const saved = localStorage.getItem(LANG_KEY);
+		if (saved === "th" || saved === "en") setLang(saved);
+	}, []);
+
+	const chooseLang = (l: Lang) => {
+		setLang(l);
+		localStorage.setItem(LANG_KEY, l);
+	};
 	const isOpen = now >= loaderData.registrationOpen && now <= loaderData.registrationClose;
 	const isCompetitor = loaderData.type === "competitor";
 	const typeLabel = loaderData.typeLabel;
@@ -173,6 +220,33 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 						)}
 					</div>
 				</div>
+			) : !lang ? (
+				/* Language picker */
+				<div style={{ maxWidth: 480, margin: "0 auto", padding: "var(--spacing-xxl) var(--spacing-lg)" }}>
+					<div className="card" style={{ padding: "var(--spacing-xl)", textAlign: "center" }}>
+						<p style={{ fontSize: 15, color: "var(--color-muted)", marginBottom: "var(--spacing-lg)", marginTop: 0 }}>
+							{"เลือกภาษา / Select Language"}
+						</p>
+						<div style={{ display: "flex", gap: "var(--spacing-md)" }}>
+							<button
+								className="btn btn-secondary"
+								style={{ flex: 1, fontSize: 16, padding: "14px 0", flexDirection: "column", gap: 4, height: "auto" }}
+								onClick={() => chooseLang("th")}
+							>
+								<FlagTH size={32} />
+								<span style={{ fontWeight: 600 }}>ภาษาไทย</span>
+							</button>
+							<button
+								className="btn btn-secondary"
+								style={{ flex: 1, fontSize: 16, padding: "14px 0", flexDirection: "column", gap: 4, height: "auto" }}
+								onClick={() => chooseLang("en")}
+							>
+								<FlagGB size={32} />
+								<span style={{ fontWeight: 600 }}>English</span>
+							</button>
+						</div>
+					</div>
+				</div>
 			) : (
 				<div style={{ padding: "var(--spacing-xl) 0 var(--spacing-section)" }}>
 					{loaderData.formConfig
@@ -181,12 +255,21 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 							slug={loaderData.slug}
 							tournamentName={loaderData.tournamentName}
 							typeLabel={loaderData.typeLabel}
+							lang={lang}
 							testMode={loaderData.testMode}
 						  />
 						: isCompetitor
 							? <CompetitorForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={loaderData.typeLabel} />
 							: <AttendeeForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={loaderData.typeLabel} />
 					}
+					{/* Floating language switch */}
+					<button
+						onClick={() => chooseLang(lang === "th" ? "en" : "th")}
+						className="fixed bottom-6 left-6 z-[999] flex items-center gap-2 px-3 py-2 rounded-full border border-hairline bg-canvas text-sm font-medium text-body shadow-sm hover:bg-surface-soft transition-colors"
+					>
+						{lang === "th" ? <FlagGB size={20} /> : <FlagTH size={20} />}
+						{lang === "th" ? "English" : "ภาษาไทย"}
+					</button>
 				</div>
 			)}
 		</div>

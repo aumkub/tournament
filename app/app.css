@@ -15,7 +15,7 @@
 	/* Canvas / Surfaces */
 	--color-canvas: #faf9f5;
 	--color-surface-soft: #f5f0e8;
-	--color-surface-card: #efe9de;
+	--color-surface-card: #ffffff;
 	--color-surface-cream-strong: #e8e0d2;
 	--color-surface-dark: #181715;
 	--color-surface-dark-elevated: #252320;
@@ -42,7 +42,7 @@
 
 	/* Typography - DESIGN.md font stack */
 	--font-display: "Noto Sans Thai", sans-serif;
-	--font-body: "Noto Sans Thai", sans-serif;
+	--font-body: "Noto Sans Thai Looped", "Noto Sans Thai", sans-serif;
 	--font-mono: "JetBrains Mono", Menlo, monospace;
 
 	/* Spacing */
@@ -462,7 +462,8 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 .input::placeholder,
 .select::placeholder,
 .textarea::placeholder {
-	color: var(--color-body);
+	color: var(--color-muted);
+	opacity: 0.6;
 }
 
 .input:focus,
@@ -475,9 +476,10 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 .select {
 	cursor: pointer;
 	appearance: none;
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236c6a64' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	-webkit-appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6a64' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 	background-repeat: no-repeat;
-	background-position: right 14px center;
+	background-position: right 12px center;
 	background-size: 16px;
 	padding-right: 40px;
 }
@@ -495,7 +497,7 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 	font-weight: 500;
 	color: var(--color-ink);
 	line-height: 1.4;
-	margin-bottom: 4px;
+	margin-bottom: 8px;
 }
 
 /* ── Checkbox & Radio ─────────────────────────────── */
@@ -513,6 +515,11 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 	justify-content: center;
 	transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
 	flex-shrink: 0;
+}
+
+.checkbox.border-error,
+.radio.border-error {
+	border-color: var(--color-error);
 }
 
 .radio {
@@ -702,7 +709,7 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 	background-color: var(--color-primary);
 	color: var(--color-on-primary);
 	font-family: var(--font-body);
-	font-size: 12px;
+	font-size: 14px;
 	font-weight: 500;
 	line-height: 1.4;
 	letter-spacing: 1.5px;
@@ -747,7 +754,7 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 /* ── Global Thai readability ────────────────────── */
 
 p, span, li, td, th, a, option {
-	font-size: max(15px, 1em);
+	font-size: max(14px, 1em);
 	line-height: 1.55;
 }
 
@@ -810,6 +817,10 @@ p, span, li, td, th, a, option {
 
 .upload-zone:hover {
 	border-color: var(--color-primary);
+}
+
+.upload-zone.border-error {
+	border-color: var(--color-error);
 }
 
 /* ── Modal / Dialog ─────────────────────────────── */
@@ -1150,7 +1161,7 @@ p, span, li, td, th, a, option {
 
 /* ──── Font size ─────────────────────────────────── */
 
-.text-xs {
+.text-sm{
 	font-size: 12px;
 }
 .text-sm {

@@ -2,6 +2,7 @@ import type { Route } from "./+types/admin/checkin";
 import { parseCookie, verifySession, hasRole } from "../../../lib/kv-session";
 import { QRScanner } from "../../../components/admin/QRScanner";
 import { AdminNav } from "../../../components/admin/AdminNav";
+import { CheckinCountdown } from "../../../components/admin/CheckinCountdown";
 import type { Role } from "../../../types/registration";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
@@ -15,7 +16,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 	}
 
 	const tournament = await env.DB.prepare(
-		"SELECT id, name, slug FROM tournaments WHERE slug = ?",
+		"SELECT id, name, slug, checkin_open_at, checkin_close_at, test_mode, competitor_title, attendee_title FROM tournaments WHERE slug = ?",
 	)
 		.bind(slug)
 		.first();
@@ -29,11 +30,18 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 		name: tournament.name as string,
 		slug: tournament.slug as string,
 		role: session.role as Role,
+		checkinOpenAt: (tournament.checkin_open_at as number) || null,
+		checkinCloseAt: (tournament.checkin_close_at as number) || null,
+		testMode: !!(tournament.test_mode as number | boolean),
+		typeLabels: {
+			competitor: (tournament.competitor_title as string) || "ผู้เข้าแข่งขัน",
+			attendee: (tournament.attendee_title as string) || "ผู้เข้าร่วมงาน",
+		},
 	};
 }
 
 export function meta({ data }: Route.MetaArgs) {
-	return [{ title: `${data?.name || "Admin"} — QR Scanner` }];
+	return [{ title: `${data?.name || "Admin"} — Check-in` }];
 }
 
 export default function CheckinPage({ loaderData }: Route.ComponentProps) {
@@ -42,10 +50,15 @@ export default function CheckinPage({ loaderData }: Route.ComponentProps) {
 			<AdminNav slug={loaderData.slug} name={loaderData.name} role={loaderData.role} current="checkin" />
 			<div className="max-w-[440px] mx-auto px-lg py-xl">
 				<div className="text-center mb-lg">
-					<h2 className="text-[20px] font-semibold m-0 mb-1">QR Scanner</h2>
+					<h2 className="!text-[24px] font-semibold m-0 mb-2">Check-in</h2>
 					<p className="text-sm text-muted m-0">{loaderData.name}</p>
 				</div>
-				<QRScanner slug={loaderData.slug} />
+				<CheckinCountdown
+					checkinOpenAt={loaderData.checkinOpenAt}
+					checkinCloseAt={loaderData.checkinCloseAt}
+				>
+					<QRScanner slug={loaderData.slug} testMode={loaderData.testMode} typeLabels={loaderData.typeLabels} />
+				</CheckinCountdown>
 			</div>
 		</>
 	);

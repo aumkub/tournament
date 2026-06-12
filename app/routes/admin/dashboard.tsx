@@ -4,6 +4,7 @@ import { StatsPanel } from "../../../components/admin/StatsPanel";
 import { RegistrantTable } from "../../../components/admin/RegistrantTable";
 import { CheckinFeed } from "../../../components/admin/CheckinFeed";
 import { AdminNav } from "../../../components/admin/AdminNav";
+import { IconDownload } from "../../../components/ui/icons";
 import { FORM_CONFIGS } from "../../../lib/form-configs/index";
 import type { Role } from "../../../types/registration";
 
@@ -45,12 +46,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 		// dynamic forms already resolved via FORM_CONFIGS in client, skip
 		void formId;
 	}
-	const compTitle = (tournament.competitor_title as string) || "";
-	const attTitle = (tournament.attendee_title as string) || "";
-	const compTitleEn = (tournament.competitor_title_en as string) || "";
-	const attTitleEn = (tournament.attendee_title_en as string) || "";
-	const compLabel = [compTitle, compTitleEn].filter(Boolean).join(" / ") || "ผู้เข้าแข่งขัน";
-	const attLabel = [attTitle, attTitleEn].filter(Boolean).join(" / ") || "ผู้เข้าร่วมงาน";
+	const compLabel = (tournament.competitor_title as string) || "ผู้เข้าแข่งขัน";
+	const attLabel = (tournament.attendee_title as string) || "ผู้เข้าร่วมงาน";
 	typeLabels["competitor"] = compLabel;
 	typeLabels["attendee"] = attLabel;
 
@@ -86,14 +83,14 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 						<h1 className="!text-[clamp(22px,4vw,28px)] !mb-1">{loaderData.name}</h1>
 						<p className="text-sm text-muted m-0">slug: {loaderData.slug}</p>
 					</div>
-					<div className="flex gap-sm flex-wrap">
+					<div className="flex gap-sm flex-wrap items-center">
 						{loaderData.previewLinks.map((link) => (
 							<a
 								key={link.href}
 								href={link.href}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="btn btn-sm btn-ghost no-underline text-xs gap-1"
+								className="btn btn-sm btn-ghost no-underline text-base gap-1"
 							>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 									<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
@@ -103,6 +100,15 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 								{link.label}
 							</a>
 						))}
+						{loaderData.role === "super_admin" && (
+							<a
+								href={`/api/admin/${loaderData.slug}/export`}
+								className="btn btn-sm btn-secondary no-underline gap-1.5"
+							>
+								<IconDownload size={14} />
+								Export
+							</a>
+						)}
 					</div>
 				</div>
 
@@ -118,7 +124,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 						<RegistrantTable slug={loaderData.slug} typeLabels={loaderData.typeLabels} role={loaderData.role} />
 					</div>
 					<div>
-						<CheckinFeed slug={loaderData.slug} />
+						<CheckinFeed slug={loaderData.slug} typeLabels={loaderData.typeLabels} />
 					</div>
 				</div>
 			</div>

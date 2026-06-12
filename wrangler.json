@@ -18,13 +18,15 @@
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",
-			"bucket_name": "tournament-uploads"
+			"bucket_name": "tournament-uploads",
+			"preview_bucket_name": "tournament-uploads-preview"
 		}
 	],
 	"kv_namespaces": [
 		{
 			"binding": "SESSIONS",
-			"id": "7715752a30834365a537e6f8df311761"
+			"id": "7715752a30834365a537e6f8df311761",
+			"preview_id": "1328c75c3f854e7da43a1420c33db0b2"
 		}
 	],
 	"durable_objects": {
@@ -41,6 +43,9 @@
 			"new_classes": ["TournamentRoom"]
 		}
 	],
+	"vars": {
+		"TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+	},
 	"queues": {
 		"producers": [
 			{

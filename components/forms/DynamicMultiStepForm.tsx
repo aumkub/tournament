@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import type { FormConfig, FieldConfig, StepConfig } from "../../types/form-config";
 import { FileUploadField } from "./FileUploadField";
 import { IconCheck, IconArrowRight, IconArrowLeft } from "../ui/icons";
+import { Select } from "../ui/Select";
 
 type Lang = "th" | "en";
 
@@ -25,6 +26,7 @@ function Field({
 	lang,
 	slug,
 	registrationId,
+	hasError,
 }: {
 	field: FieldConfig;
 	value: unknown;
@@ -32,42 +34,33 @@ function Field({
 	lang: Lang;
 	slug: string;
 	registrationId: string;
+	hasError?: boolean;
 }) {
 	const label = t(field.label, lang);
 	const note = field.note ? t(field.note, lang) : undefined;
-
-	const inputStyle: React.CSSProperties = {
-		width: "100%",
-		padding: "10px 12px",
-		border: "1px solid var(--color-border)",
-		borderRadius: "var(--radius-md)",
-		fontSize: 15,
-		background: "var(--color-input-bg, #fff)",
-		boxSizing: "border-box",
-	};
-
-	const wrapStyle: React.CSSProperties = { marginBottom: "var(--spacing-lg)" };
+	const errorBorder = hasError ? "border-[#EFC8C7] ring-1 ring-error/30" : "";
 
 	if (field.type === "multiselect") {
 		const selected = Array.isArray(value) ? (value as string[]) : [];
 		return (
-			<div style={wrapStyle}>
-				<label className="label">{label}{field.required && <span style={{ color: "var(--color-error)" }}> *</span>}</label>
-				{note && <p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 2, marginBottom: 8 }}>{note}</p>}
-				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+			<div className="mb-lg">
+				<label className="label">
+					{label}{field.required && <span className="text-error"> *</span>}
+				</label>
+				{note && <p className="!text-xs text-muted !-mt-1 mb-3">{note}</p>}
+				<div className="flex flex-col gap-2 rounded-lg">
 					{field.options?.map((opt) => {
 						const checked = selected.includes(opt.value);
 						return (
 							<label
 								key={opt.value}
-								style={{
-									display: "flex", alignItems: "center", gap: 12,
-									padding: "12px 16px",
-									border: `1.5px solid ${checked ? "var(--color-primary, #cc785c)" : "var(--color-border)"}`,
-									borderRadius: "var(--radius-md)",
-									background: checked ? "var(--color-surface-soft)" : "transparent",
-									cursor: "pointer", fontSize: 15, transition: "border-color 0.15s, background 0.15s",
-								}}
+								className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-base transition-colors ${
+									checked
+										? "border-[1.5px] border-primary bg-surface-soft"
+										: hasError
+										? "border-[1.5px] border-[#EFC8C7] bg-transparent hover:bg-surface-soft"
+										: "border-[1.5px] border-hairline bg-transparent hover:bg-surface-soft"
+								}`}
 							>
 								<input
 									type="checkbox"
@@ -78,7 +71,7 @@ function Field({
 											: [...selected, opt.value];
 										onChange(field.key, next);
 									}}
-									style={{ width: 18, height: 18, accentColor: "var(--color-primary)", flexShrink: 0 }}
+									className="checkbox"
 								/>
 								{t(opt.label, lang)}
 							</label>
@@ -91,23 +84,24 @@ function Field({
 
 	if (field.type === "radio") {
 		return (
-			<div style={wrapStyle}>
-				<label className="label">{label}{field.required && <span style={{ color: "var(--color-error)" }}> *</span>}</label>
-				{note && <p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 2, marginBottom: 8 }}>{note}</p>}
-				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+			<div className="mb-lg">
+				<label className="label">
+					{label}{field.required && <span className="text-error"> *</span>}
+				</label>
+				{note && <p className="!text-xs text-muted !-mt-1 mb-3">{note}</p>}
+				<div className="flex flex-col gap-2 rounded-lg">
 					{field.options?.map((opt) => {
 						const checked = value === opt.value;
 						return (
 							<label
 								key={opt.value}
-								style={{
-									display: "flex", alignItems: "center", gap: 12,
-									padding: "12px 16px",
-									border: `1.5px solid ${checked ? "var(--color-primary, #cc785c)" : "var(--color-border)"}`,
-									borderRadius: "var(--radius-md)",
-									background: checked ? "var(--color-surface-soft)" : "transparent",
-									cursor: "pointer", fontSize: 15, transition: "border-color 0.15s, background 0.15s",
-								}}
+								className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-base transition-colors ${
+									checked
+										? "border-[1.5px] border-primary bg-surface-soft"
+										: hasError
+										? "border-[1.5px] border-[#EFC8C7] bg-transparent hover:bg-surface-soft"
+										: "border-[1.5px] border-hairline bg-transparent hover:bg-surface-soft"
+								}`}
 							>
 								<input
 									type="radio"
@@ -115,7 +109,7 @@ function Field({
 									value={opt.value}
 									checked={checked}
 									onChange={() => onChange(field.key, opt.value)}
-									style={{ width: 18, height: 18, accentColor: "var(--color-primary)", flexShrink: 0 }}
+									className="radio"
 								/>
 								{t(opt.label, lang)}
 							</label>
@@ -128,13 +122,16 @@ function Field({
 
 	if (field.type === "select") {
 		return (
-			<div style={wrapStyle}>
-				<label className="label">{label}{field.required && <span style={{ color: "var(--color-error)" }}> *</span>}</label>
-				{note && <p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 2, marginBottom: 8 }}>{note}</p>}
-				<select
+			<div className="mb-lg">
+				<label className="label">
+					{label}{field.required && <span className="text-error"> *</span>}
+				</label>
+				{note && <p className="!text-xs text-muted !-mt-1 mb-3">{note}</p>}
+				<Select
 					value={(value as string) || ""}
 					onChange={(e) => onChange(field.key, e.target.value)}
-					style={{ ...inputStyle }}
+					arrowRight={12}
+					className={`select ${errorBorder}`}
 				>
 					<option value="">{lang === "th" ? "-- เลือก --" : "-- Select --"}</option>
 					{field.options?.map((opt) => (
@@ -142,39 +139,48 @@ function Field({
 							{t(opt.label, lang)}
 						</option>
 					))}
-				</select>
+				</Select>
 			</div>
 		);
 	}
 
 	if (field.type === "checkbox") {
+		const isConsent = field.key.startsWith("consent_");
 		return (
-			<div style={{ ...wrapStyle, display: "flex", alignItems: "flex-start", gap: 10 }}>
+			<label
+				htmlFor={field.key}
+				className={`mb-xs flex items-start gap-2.5 cursor-pointer ${
+					isConsent ? "px-3 py-2.5 rounded-lg bg-surface-soft border border-hairline" : ""
+				}`}
+			>
 				<input
 					type="checkbox"
 					id={field.key}
 					checked={!!value}
 					onChange={(e) => onChange(field.key, e.target.checked)}
-					style={{ width: 18, height: 18, marginTop: 2, accentColor: "var(--color-primary)", flexShrink: 0 }}
+					className={`checkbox mt-0.5 ${hasError ? "border-[#EFC8C7]" : ""}`}
 				/>
-				<label htmlFor={field.key} style={{ cursor: "pointer", fontSize: 15, lineHeight: 1.5 }}>
+				<span className="text-sm leading-relaxed text-body">
 					{label}
-					{field.required && <span style={{ color: "var(--color-error)" }}> *</span>}
-				</label>
-			</div>
+					{field.required && <span className="text-error"> *</span>}
+				</span>
+			</label>
 		);
 	}
 
 	if (field.type === "textarea") {
 		return (
-			<div style={wrapStyle}>
-				<label className="label">{label}{field.required && <span style={{ color: "var(--color-error)" }}> *</span>}</label>
-				{note && <p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 2, marginBottom: 8 }}>{note}</p>}
+			<div className="mb-lg">
+				<label className="label">
+					{label}{field.required && <span className="text-error"> *</span>}
+				</label>
+				{note && <p className="!text-xs text-muted !-mt-1 mb-3">{note}</p>}
 				<textarea
+					className={`input ${errorBorder}`}
 					value={(value as string) || ""}
 					onChange={(e) => onChange(field.key, e.target.value)}
 					rows={4}
-					style={{ ...inputStyle, resize: "vertical" }}
+					style={{ resize: "vertical" }}
 				/>
 			</div>
 		);
@@ -183,7 +189,6 @@ function Field({
 	if (field.type === "file") {
 		const keys = Array.isArray(value) ? (value as string[]) : value ? [value as string] : [];
 		const category = field.accept?.includes("image") ? "photos" : "documents";
-
 		return (
 			<FileUploadField
 				key={field.key}
@@ -193,11 +198,19 @@ function Field({
 				registrationId={registrationId}
 				category={category as "photos" | "documents"}
 				multiple={field.multiple}
+				hasError={hasError}
 				onUploadComplete={(key) => {
 					if (field.multiple) {
 						onChange(field.key, [...keys, key]);
 					} else {
 						onChange(field.key, key);
+					}
+				}}
+				onUploadRemove={(key) => {
+					if (field.multiple) {
+						onChange(field.key, keys.filter((k) => k !== key));
+					} else {
+						onChange(field.key, "");
 					}
 				}}
 			/>
@@ -206,57 +219,169 @@ function Field({
 
 	// text, email, tel, date, number, url
 	return (
-		<div style={wrapStyle}>
-			<label className="label">{label}{field.required && <span style={{ color: "var(--color-error)" }}> *</span>}</label>
-			{note && <p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 2, marginBottom: 8 }}>{note}</p>}
+		<div className="mb-lg">
+			<label className="label">
+				{label}{field.required && <span className="text-error"> *</span>}
+			</label>
+			{note && <p className="!text-xs text-muted !-mt-1 mb-3">{note}</p>}
 			<input
+				className={`input ${errorBorder}`}
 				type={field.type}
 				value={(value as string) || ""}
 				min={field.min}
 				max={field.max}
 				onChange={(e) => onChange(field.key, e.target.value)}
-				style={inputStyle}
 			/>
 		</div>
 	);
 }
 
+function isUploadKey(v: unknown): v is string {
+	return typeof v === "string" && v.includes("/") && !v.startsWith("http");
+}
+
+function renderUploadKey(key: string, onImageClick?: (url: string) => void, size = "w-20 h-20"): React.ReactNode {
+	const isImage = /\.(jpe?g|png|gif|webp|avif)$/i.test(key);
+	const url = `/api/file?key=${encodeURIComponent(key)}`;
+	return isImage ? (
+		<button type="button" onClick={() => onImageClick?.(url)} className="bg-transparent border-0 p-0 cursor-pointer">
+			<img src={url} alt="" className={`${size} object-cover rounded-lg border border-hairline hover:opacity-80 transition-opacity`} />
+		</button>
+	) : (
+		<a href={url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs break-all">
+			{key.split("/").pop()}
+		</a>
+	);
+}
+
+function fieldDisplay(val: unknown, field: FieldConfig, lang: Lang, onImageClick?: (url: string) => void): React.ReactNode {
+	if (val === undefined || val === null || val === "") return null;
+	if (Array.isArray(val)) {
+		if (val.length === 0) return null;
+		// Array of upload keys
+		if ((val as unknown[]).every(isUploadKey)) {
+			return (
+				<div className="flex flex-wrap gap-2">
+					{(val as string[]).map((key) => (
+						<React.Fragment key={key}>{renderUploadKey(key, onImageClick, "w-16 h-16")}</React.Fragment>
+					))}
+				</div>
+			);
+		}
+		return (val as string[]).map((v) => field.options?.find((o) => o.value === v)?.label[lang] ?? v).join(", ");
+	}
+	if (field.options) return field.options.find((o) => o.value === val)?.label[lang] ?? String(val);
+	if (typeof val === "boolean") return val ? (lang === "th" ? "ใช่" : "Yes") : (lang === "th" ? "ไม่" : "No");
+	if (isUploadKey(val)) return renderUploadKey(val, onImageClick);
+	if (typeof val === "string" && /^https?:\/\//.test(val)) {
+		return <a href={val} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all">{val}</a>;
+	}
+	return String(val);
+}
+
 function SummaryCard({ data, config, lang }: { data: Record<string, unknown>; config: FormConfig; lang: Lang }) {
-	const rows: { label: string; value: string }[] = [];
+	const [activeIdx, setActiveIdx] = useState(0);
+	const [lightbox, setLightbox] = useState<string | null>(null);
 	const activeSteps = resolveActiveSteps(config.steps, data);
+
+	// Build field lookup map
+	const fieldMap = new Map<string, FieldConfig>();
 	for (const step of activeSteps) {
 		if (step.showSummary) continue;
-		for (const field of step.fields) {
-			const val = data[field.key];
-			if (val === undefined || val === null || val === "") continue;
-			let display = "";
-			if (Array.isArray(val)) {
-				const opts = field.options;
-				display = (val as string[])
-					.map((v) => opts?.find((o) => o.value === v)?.label[lang] ?? v)
-					.join(", ");
-			} else if (field.options) {
-				display = field.options.find((o) => o.value === val)?.label[lang] ?? String(val);
-			} else if (typeof val === "boolean") {
-				display = val ? (lang === "th" ? "ใช่" : "Yes") : (lang === "th" ? "ไม่" : "No");
-			} else if (typeof val === "string" && val.startsWith("uploads/")) {
-				display = lang === "th" ? "(ไฟล์อัปโหลดแล้ว)" : "(file uploaded)";
-			} else {
-				display = String(val);
-			}
-			rows.push({ label: t(field.label, lang), value: display });
-		}
+		for (const field of step.fields) fieldMap.set(field.key, field);
 	}
 
+	// Determine groups — prefer explicit config.groups, else group by step
+	type Group = { label: string; fields: FieldConfig[] };
+	let groups: Group[];
+
+	if (config.groups && config.groups.length > 0) {
+		groups = config.groups.map((g) => ({
+			label: t(g.label, lang),
+			fields: g.keys.map((k) => fieldMap.get(k)).filter(Boolean) as FieldConfig[],
+		})).filter((g) => g.fields.length > 0);
+	} else {
+		groups = activeSteps
+			.filter((s) => !s.showSummary)
+			.map((s) => ({ label: t(s.title, lang), fields: s.fields }))
+			.filter((g) => g.fields.length > 0);
+	}
+
+	const safeIdx = Math.min(activeIdx, groups.length - 1);
+	const activeGroup = groups[safeIdx];
+
+	const visibleRows = activeGroup?.fields
+		.map((field) => ({ field, display: fieldDisplay(data[field.key], field, lang, setLightbox) }))
+		.filter((r) => r.display !== null) ?? [];
+
 	return (
-		<div className="card" style={{ padding: "var(--spacing-lg)", marginBottom: "var(--spacing-xl)", fontSize: 14 }}>
-			<p style={{ fontWeight: 600, marginBottom: 12 }}>{lang === "th" ? "สรุปข้อมูลที่กรอก" : "Summary"}</p>
-			{rows.map((r) => (
-				<div key={r.label} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-					<span style={{ color: "var(--color-muted)", minWidth: 140, flexShrink: 0 }}>{r.label}:</span>
-					<span style={{ wordBreak: "break-word" }}>{r.value}</span>
+		<div className="mb-xl">
+			{/* Lightbox */}
+			{lightbox && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+					onClick={() => setLightbox(null)}
+				>
+					<img
+						src={lightbox}
+						alt=""
+						className="max-w-full max-h-full rounded-xl shadow-2xl object-contain"
+						style={{ maxHeight: "90vh", maxWidth: "90vw" }}
+						onClick={(e) => e.stopPropagation()}
+					/>
+					<button
+						type="button"
+						onClick={() => setLightbox(null)}
+						className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center border-0 cursor-pointer transition-colors"
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+							<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+						</svg>
+					</button>
 				</div>
-			))}
+			)}
+
+			<p className="text-sm font-semibold text-muted uppercase tracking-wide mb-md m-0">
+				{lang === "th" ? "สรุปข้อมูลที่กรอก" : "Summary"}
+			</p>
+
+			<div className="card !p-0 overflow-hidden">
+				{/* Tab bar */}
+				{groups.length > 1 && (
+					<div className="flex border-b border-hairline overflow-x-auto">
+						{groups.map((g, i) => (
+							<button
+								key={i}
+								type="button"
+								onClick={() => setActiveIdx(i)}
+								className={`flex-shrink-0 text-sm font-medium px-4 py-2.5 border-b-2 -mb-px bg-transparent border-x-0 border-t-0 cursor-pointer whitespace-nowrap transition-colors ${
+									safeIdx === i
+										? "border-b-primary text-primary"
+										: "border-b-transparent text-muted hover:text-body"
+								}`}
+							>
+								{g.label}
+							</button>
+						))}
+					</div>
+				)}
+
+				{/* Table */}
+				<table className="w-full text-sm">
+					<tbody>
+						{visibleRows.map(({ field, display }, ri) => (
+							<tr key={field.key} className={ri < visibleRows.length - 1 ? "border-b border-hairline/50" : ""}>
+								<td className="py-2.5 px-lg text-muted align-top" style={{ width: "40%", minWidth: 120 }}>
+									{t(field.label, lang)}
+								</td>
+								<td className="py-2.5 px-lg text-ink align-top font-medium break-words" style={{ width: "60%" }}>
+									{display}
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	);
 }
@@ -271,10 +396,8 @@ const PROVINCES = ["กรุงเทพมหานคร","เชียงใ
 function rand<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function randInt(min: number, max: number): number { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function randPhone(): string { return "08" + Array.from({ length: 8 }, () => randInt(0, 9)).join(""); }
-function randEmail(nameTh: string): string {
-	const slug = nameTh.replace(/\s/g, "").toLowerCase() || "user";
-	return `${slug}${randInt(10, 99)}@example.com`;
-}
+const EMAIL_SLUGS = ["user","test","demo","player","member","guest","athlete","participant","register","entry"];
+function randEmail(): string { return `${rand(EMAIL_SLUGS)}${randInt(100, 9999)}@example.com`; }
 
 function generateTestValue(field: FieldConfig): unknown {
 	const k = field.key.toLowerCase();
@@ -301,12 +424,11 @@ function generateTestValue(field: FieldConfig): unknown {
 	}
 	if (field.type === "number") return String(randInt(Number(field.min ?? 10), Number(field.max ?? 99)));
 	if (field.type === "url") return "https://example.com";
-	// text / tel / email
 	const thFirst = rand(THAI_FIRST);
 	const thLast = rand(THAI_LAST);
 	const enFirst = rand(EN_FIRST);
 	const enLast = rand(EN_LAST);
-	if (field.type === "email" || k.includes("email")) return randEmail(thFirst);
+	if (field.type === "email" || k.includes("email")) return randEmail();
 	if (field.type === "tel" || k.includes("phone") || k.includes("tel")) return randPhone();
 	if (field.type === "textarea") return "ข้อมูลทดสอบ #" + randInt(100, 999);
 	if (k.includes("name_th") || k.includes("fullname_th") || k === "full_name_th") return `${thFirst} ${thLast}`;
@@ -345,49 +467,54 @@ export function DynamicMultiStepForm({
 	const [data, setData] = useState<Record<string, unknown>>({});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [isDuplicate, setIsDuplicate] = useState(false);
+	const [errorFields, setErrorFields] = useState<Set<string>>(new Set());
 	const [registrationId] = useState(() => crypto.randomUUID());
 
-	// Re-evaluate active steps whenever data changes (conditions may change)
 	const activeSteps = resolveActiveSteps(config.steps, data);
 	const currentStep: StepConfig = activeSteps[stepIndex] ?? activeSteps[activeSteps.length - 1];
 	const totalSteps = activeSteps.length;
 
 	const update = useCallback((key: string, val: unknown) => {
 		setData((prev) => ({ ...prev, [key]: val }));
+		setErrorFields((prev) => { if (!prev.has(key)) return prev; const next = new Set(prev); next.delete(key); return next; });
 	}, []);
 
 	const validateStep = (step: StepConfig): boolean => {
+		const missing = new Set<string>();
 		for (const field of step.fields) {
 			if (!field.required) continue;
 			const val = data[field.key];
 			if (val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0) || val === false) {
-				setError(lang === "th" ? "กรุณากรอกข้อมูลที่จำเป็นให้ครบ" : "Please fill in all required fields");
-				return false;
+				missing.add(field.key);
 			}
 		}
-		setError(null);
+		if (missing.size > 0) {
+			setErrorFields(missing);
+			setError(lang === "th" ? "กรุณากรอกข้อมูลที่จำเป็นให้ครบ" : "Please fill in all required fields");
+			return false;
+		}
+		setErrorFields(new Set());
+		setError(null); setIsDuplicate(false);
 		return true;
 	};
 
 	const handleNext = () => {
 		if (!validateStep(currentStep)) return;
-		// Clamp in case step count shrunk due to condition change
 		setStepIndex((i) => Math.min(i + 1, resolveActiveSteps(config.steps, data).length - 1));
 		window.scrollTo(0, 0);
 	};
 
 	const handleBack = () => {
-		setError(null);
+		setError(null); setIsDuplicate(false); setErrorFields(new Set());
 		setStepIndex((i) => Math.max(i - 1, 0));
 		window.scrollTo(0, 0);
 	};
 
 	const handleSubmit = async () => {
 		if (!validateStep(currentStep)) return;
-
 		setSubmitting(true);
-		setError(null);
-
+		setError(null); setIsDuplicate(false);
 		try {
 			const email = data[config.emailField] as string;
 			const res = await fetch(`/api/register/${slug}/form`, {
@@ -395,12 +522,15 @@ export function DynamicMultiStepForm({
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ form_id: config.id, email, data }),
 			});
-
 			const text = await res.text();
 			let result: any = {};
 			try { result = JSON.parse(text); } catch { throw new Error(text || "เกิดข้อผิดพลาด"); }
+			if (res.status === 409 && result.code === "duplicate_email") {
+				setIsDuplicate(true);
+				setSubmitting(false);
+				return;
+			}
 			if (!res.ok) throw new Error(result.error || `เกิดข้อผิดพลาด (${res.status})`);
-
 			window.location.href = `/${slug}/register/success?id=${result.id}`;
 		} catch (err: any) {
 			setError(err.message);
@@ -424,41 +554,39 @@ export function DynamicMultiStepForm({
 	};
 
 	return (
-		<div style={{ maxWidth: 640, margin: "0 auto", padding: "var(--spacing-lg)" }}>
+		<div className="max-w-[640px] mx-auto px-lg">
 			{/* Header */}
-			<div style={{ textAlign: "center", marginBottom: "var(--spacing-xxl)" }}>
-				<h1 style={{ fontSize: 28, marginBottom: 8 }}>{tournamentName}</h1>
+			<div className="text-center mb-xxl hidden">
+				<h1 className="!text-[28px] !mb-3">{tournamentName}</h1>
 				<span className="badge-coral">{typeLabel}</span>
 			</div>
 
 			{/* Step progress */}
-			<div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: "var(--spacing-xl)" }}>
+			<div className="flex items-center justify-center mb-xl">
 				{activeSteps.map((s, i) => (
-					<div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<div style={{
-							width: 28,
-							height: 28,
-							borderRadius: "50%",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							fontSize: 13,
-							fontWeight: 600,
-							background: i < stepIndex ? "var(--color-success)" : i === stepIndex ? "var(--color-primary)" : "var(--color-border)",
-							color: i <= stepIndex ? "white" : "var(--color-muted)",
-						}}>
+					<div key={s.id} className="flex items-center">
+						{/* Connector line before circle (except first) */}
+						{i > 0 && (
+							<div className={`h-0.5 w-8 ${i <= stepIndex ? "bg-success" : "bg-hairline"}`} />
+						)}
+						<div
+							className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
+								i < stepIndex
+									? "bg-success text-white"
+									: i === stepIndex
+									? "bg-primary text-white"
+									: "bg-hairline text-muted"
+							}`}
+						>
 							{i < stepIndex ? <IconCheck size={14} color="white" /> : i + 1}
 						</div>
-						{i < activeSteps.length - 1 && (
-							<div style={{ width: 24, height: 2, background: i < stepIndex ? "var(--color-success)" : "var(--color-border)" }} />
-						)}
 					</div>
 				))}
 			</div>
 
-			{/* Step title */}
-			<div className="card" style={{ padding: "var(--spacing-xl)" }}>
-				<h2 style={{ fontSize: 20, marginBottom: "var(--spacing-xl)" }}>
+			{/* Step card */}
+			<div className="card p-xl">
+				<h2 className="!text-xl mb-xl">
 					{lang === "th" ? `ขั้นตอนที่ ${stepIndex + 1} จาก ${totalSteps}` : `Step ${stepIndex + 1} of ${totalSteps}`}
 					{" — "}
 					{t(currentStep.title, lang)}
@@ -477,47 +605,45 @@ export function DynamicMultiStepForm({
 						lang={lang}
 						slug={slug}
 						registrationId={registrationId}
+						hasError={errorFields.has(field.key)}
 					/>
 				))}
 
-				{error && (
-					<p style={{ color: "var(--color-error)", fontSize: 14, marginBottom: "var(--spacing-lg)" }}>
-						{error}
-					</p>
+				{isDuplicate && (
+					<div className="rounded-lg border border-warning p-md mb-lg" style={{ background: "rgba(212,160,23,0.08)" }}>
+						<p className="text-sm font-semibold text-warning m-0 mb-1">
+							{lang === "th" ? "อีเมลนี้ได้ลงทะเบียนไปแล้ว" : "This email is already registered"}
+						</p>
+						<p className="text-sm text-muted m-0">
+							{lang === "th"
+								? "อีเมลที่ใช้ลงทะเบียนนี้มีข้อมูลในระบบแล้ว หากต้องการตรวจสอบกรุณาติดต่อผู้จัดงาน"
+								: "This email already exists in the system. Please contact the organizer to verify."}
+						</p>
+					</div>
 				)}
 
-				<div style={{ display: "flex", gap: 12, marginTop: "var(--spacing-xl)" }}>
+				{error && (
+					<div className="rounded-md p-md mb-lg border border-[#EFC8C7]" style={{ background: "rgba(198,69,69,0.08)" }}>
+						<p className="text-sm text-error m-0">{error}</p>
+					</div>
+				)}
+
+				<div className="flex gap-3 mt-xl">
 					{stepIndex > 0 && (
-						<button
-							type="button"
-							className="btn btn-secondary"
-							onClick={handleBack}
-							style={{ flex: 1 }}
-						>
+						<button type="button" className="btn btn-secondary flex-1" onClick={handleBack}>
 							<IconArrowLeft size={16} />
 							{lang === "th" ? "ย้อนกลับ" : "Back"}
 						</button>
 					)}
 					{isLastStep ? (
-						<button
-							type="button"
-							className="btn btn-primary"
-							onClick={handleSubmit}
-							disabled={submitting}
-							style={{ flex: 1 }}
-						>
+						<button type="button" className="btn btn-primary flex-1" onClick={handleSubmit} disabled={submitting}>
 							{submitting
 								? (lang === "th" ? "กำลังส่ง..." : "Submitting...")
 								: (lang === "th" ? "ส่งใบสมัคร" : "Submit")}
 							{!submitting && <IconCheck size={16} />}
 						</button>
 					) : (
-						<button
-							type="button"
-							className="btn btn-primary"
-							onClick={handleNext}
-							style={{ flex: 1 }}
-						>
+						<button type="button" className="btn btn-primary flex-1" onClick={handleNext}>
 							{lang === "th" ? "ถัดไป" : "Next"}
 							<IconArrowRight size={16} />
 						</button>
@@ -531,33 +657,14 @@ export function DynamicMultiStepForm({
 					type="button"
 					onClick={handleAutoFill}
 					title="กรอกข้อมูลทดสอบอัตโนมัติ"
-					style={{
-						position: "fixed",
-						bottom: 24,
-						right: 24,
-						zIndex: 1000,
-						display: "flex",
-						alignItems: "center",
-						gap: 8,
-						padding: "10px 18px",
-						borderRadius: 999,
-						background: "#f59e0b",
-						color: "white",
-						fontWeight: 600,
-						fontSize: 14,
-						border: "none",
-						cursor: "pointer",
-						boxShadow: "0 4px 16px rgba(245,158,11,0.5)",
-						transition: "transform 0.1s, box-shadow 0.1s",
-					}}
-					onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.05)"; }}
-					onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+					className="fixed bottom-6 right-6 z-[1000] flex items-center gap-2 px-[18px] py-[10px] rounded-full text-white font-semibold text-sm border-none cursor-pointer"
+					style={{ background: "#f59e0b", boxShadow: "0 4px 16px rgba(245,158,11,0.5)" }}
 				>
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
 						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
 						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
 					</svg>
-					กรอกข้อมูลทดสอบ
+					Auto Fill
 				</button>
 			)}
 		</div>

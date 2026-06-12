@@ -78,7 +78,7 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 					</p>
 					{competitorLeft !== null && (
 						<div className="mt-2">
-							<span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+							<span className={`text-smfont-semibold px-2 py-0.5 rounded-full ${
 								competitorLeft <= 0 ? "bg-[#fef2f2] text-error" :
 								competitorLeft <= 5 ? "bg-[#fffbeb] text-[#b45309]" :
 								"bg-[#f0fdf4] text-success"
@@ -99,7 +99,7 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 					</p>
 					{attendeeLeft !== null && (
 						<div className="mt-2">
-							<span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+							<span className={`text-smfont-semibold px-2 py-0.5 rounded-full ${
 								attendeeLeft <= 0 ? "bg-[#fef2f2] text-error" :
 								attendeeLeft <= 5 ? "bg-[#fffbeb] text-[#b45309]" :
 								"bg-[#f0fdf4] text-success"
@@ -120,7 +120,7 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 					</p>
 					{totalLeft !== null && (
 						<div className="mt-2">
-							<span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+							<span className={`text-smfont-semibold px-2 py-0.5 rounded-full ${
 								totalLeft <= 0 ? "bg-[#fef2f2] text-error" :
 								totalLeft <= 5 ? "bg-[#fffbeb] text-[#b45309]" :
 								"bg-[#f0fdf4] text-success"
@@ -143,21 +143,6 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 					</div>
 				</div>
 			</div>
-
-			{/* Summary row when limits exist */}
-			{hasAnyLimit && (
-				<div className="flex gap-lg mt-lg p-md p-lg bg-canvas rounded-md border border-hairline text-xs text-muted">
-					{stats.limits.total && (
-						<span>รวม: {stats.total}/{stats.limits.total}</span>
-					)}
-					{stats.limits.competitor && (
-						<span>ผู้เข้าแข่งขัน: {stats.competitors}/{stats.limits.competitor}</span>
-					)}
-					{stats.limits.attendee && (
-						<span>ผู้เข้าร่วมงาน: {stats.attendees}/{stats.limits.attendee}</span>
-					)}
-				</div>
-			)}
 		</div>
 	);
 }

@@ -8,7 +8,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 	// Verify session
 	const token = parseCookie(request.headers.get("Cookie"));
 	const session = await verifySession(env.SESSIONS, token || "");
-	if (!session || !hasRole(session, "admin")) {
+	if (!session || !hasRole(session, "assistant")) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 

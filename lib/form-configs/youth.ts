@@ -1,4 +1,4 @@
-import type { FormConfig } from "../../types/form-config";
+import type { FormConfig, DataGroup } from "../../types/form-config";
 import { THAI_PROVINCES } from "./thai-provinces";
 import { HEARD_FROM_OPTIONS } from "./shared-options";
 
@@ -224,6 +224,33 @@ export const youthConfig: FormConfig = {
 					required: true,
 				},
 			],
+		},
+	],
+	groups: [
+		{
+			id: "child",
+			label: { th: "ข้อมูลเด็ก", en: "Child Info" },
+			keys: [
+				"attendance_days", "youth_path",
+				"child_full_name_th", "child_full_name_en", "child_nickname_th", "child_nickname_en",
+				"child_dob", "child_age", "child_gender", "child_province", "child_school",
+				"golf_experience_years", "child_photo",
+			],
+		},
+		{
+			id: "parent",
+			label: { th: "ข้อมูลผู้ปกครอง", en: "Parent Info" },
+			keys: ["parent_full_name", "parent_relationship", "parent_phone", "parent_email", "heard_from"],
+		},
+		{
+			id: "results",
+			label: { th: "วิดีโอ & ผลงาน", en: "Videos & Results" },
+			keys: ["swing_video_url", "intro_video_url", "scorecards", "result_description"],
+		},
+		{
+			id: "consent",
+			label: { th: "ยินยอม", en: "Consent" },
+			keys: ["consent_pdpa", "consent_photo_video"],
 		},
 	],
 };

@@ -2,11 +2,10 @@ import { useState } from "react";
 import { useRouteLoaderData } from "react-router";
 import type { Route } from "../../app/+types/root";
 import {
-	IconLock,
-	IconLogOut,
 	IconMenu,
 	IconX,
 	IconSettings,
+	IconLogOut,
 } from "./icons";
 
 const navLinkClass = "inline-flex items-center gap-1.5 text-sm font-medium text-muted no-underline px-3 py-1.5 rounded-md transition-colors hover:text-body hover:bg-surface-soft";
@@ -16,7 +15,7 @@ export function Header() {
 	const rootData = useRouteLoaderData<Route["loaderArgs"]>("root");
 	const authenticated = rootData?.authenticated ?? false;
 	const role = (rootData as any)?.role ?? null;
-	const backendUrl = (rootData as any)?.backendUrl ?? "/admin";
+	const backendUrl = (rootData as any)?.backendUrl ?? "/portal";
 	const isAdminPlus = role === "admin" || role === "super_admin";
 
 	const handleLogout = async () => {
@@ -39,30 +38,21 @@ export function Header() {
 				<nav className="hidden sm:flex items-center gap-xs">
 					<a href="/" className={navLinkClass}>หน้าหลัก</a>
 
-					{authenticated ? (
-						<>
-							{isAdminPlus && (
-								<a
-									href={backendUrl}
-									className="inline-flex items-center gap-1.5 text-sm font-medium text-white px-3 py-1.5 rounded-md bg-primary transition-opacity hover:opacity-85 no-underline"
-								>
-									<IconSettings size={14} /> Backend
-								</a>
-							)}
-							<button
-								onClick={handleLogout}
-								className="inline-flex items-center gap-1.5 text-sm font-medium text-muted px-3 py-1.5 rounded-md border-none bg-transparent cursor-pointer transition-colors hover:text-error hover:bg-surface-soft"
-							>
-								<IconLogOut size={14} /> ออกจากระบบ
-							</button>
-						</>
-					) : (
+					{authenticated && isAdminPlus && (
 						<a
-							href="/admin"
-							className="inline-flex items-center gap-1.5 text-sm font-medium text-muted px-3 py-1.5 rounded-md border border-hairline transition-colors hover:text-body hover:border-body no-underline"
+							href={backendUrl}
+							className="inline-flex items-center gap-1.5 text-sm font-medium text-white px-3 py-1.5 rounded-md bg-primary transition-opacity hover:opacity-85 no-underline"
 						>
-							<IconLock size={14} /> Admin
+							<IconSettings size={14} /> Backend
 						</a>
+					)}
+					{authenticated && (
+						<button
+							onClick={handleLogout}
+							className="inline-flex items-center gap-1.5 text-sm font-medium text-muted px-3 py-1.5 rounded-md border-none bg-transparent cursor-pointer transition-colors hover:text-error hover:bg-surface-soft"
+						>
+							<IconLogOut size={14} /> ออกจากระบบ
+						</button>
 					)}
 				</nav>
 
@@ -86,32 +76,22 @@ export function Header() {
 					>
 						หน้าหลัก
 					</a>
-					{authenticated ? (
-						<>
-							{isAdminPlus && (
-								<a
-									href={backendUrl}
-									onClick={() => setMenuOpen(false)}
-									className="text-sm font-medium text-white py-2.5 px-3 rounded-md flex items-center gap-2 bg-primary no-underline"
-								>
-									<IconSettings size={15} /> Backend
-								</a>
-							)}
-							<button
-								onClick={() => { setMenuOpen(false); handleLogout(); }}
-								className="text-sm font-medium text-muted py-2.5 px-3 rounded-md flex items-center gap-2 bg-transparent border-none cursor-pointer w-full text-left hover:bg-surface-soft"
-							>
-								<IconLogOut size={15} /> ออกจากระบบ
-							</button>
-						</>
-					) : (
+					{authenticated && isAdminPlus && (
 						<a
-							href="/admin"
+							href={backendUrl}
 							onClick={() => setMenuOpen(false)}
-							className="text-sm font-medium text-body py-2.5 px-3 rounded-md flex items-center gap-2 no-underline hover:bg-surface-soft"
+							className="text-sm font-medium text-white py-2.5 px-3 rounded-md flex items-center gap-2 bg-primary no-underline"
 						>
-							<IconLock size={15} /> Admin
+							<IconSettings size={15} /> Backend
 						</a>
+					)}
+					{authenticated && (
+						<button
+							onClick={() => { setMenuOpen(false); handleLogout(); }}
+							className="text-sm font-medium text-muted py-2.5 px-3 rounded-md flex items-center gap-2 bg-transparent border-none cursor-pointer w-full text-left hover:bg-surface-soft hover:text-error"
+						>
+							<IconLogOut size={15} /> ออกจากระบบ
+						</button>
 					)}
 				</div>
 			)}

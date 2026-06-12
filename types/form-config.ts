@@ -46,10 +46,17 @@ export type StepConfig = {
 	condition?: StepCondition;
 };
 
+export type DataGroup = {
+	id: string;
+	label: I18n;
+	keys: string[]; // field keys to show in this tab
+};
+
 export type FormConfig = {
 	id: string;
 	label: I18n;
 	defaultUrlSlug: string;
 	steps: StepConfig[];
 	emailField: string;
+	groups?: DataGroup[]; // for popup tab display
 };

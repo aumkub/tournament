@@ -447,6 +447,10 @@ export function IconTrash(p: IconProps) {
 	);
 }
 
+export function IconChevronRight(p: IconProps) {
+	return svg(<polyline points="9 18 15 12 9 6" />, { ...defaults, ...p });
+}
+
 export function ImageIcon(p: IconProps) {
 	return svg(
 		<>

@@ -81,7 +81,33 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		}
 	}
 
-	const id = crypto.randomUUID();
+	// Check duplicate email within same tournament + type
+	const duplicate = await env.DB.prepare(
+		"SELECT id FROM registrations WHERE tournament_id = ? AND type = ? AND email = ?",
+	)
+		.bind(tournament.id as string, body.form_id, email.trim().toLowerCase())
+		.first();
+	if (duplicate) {
+		return Response.json(
+			{ error: "อีเมลนี้ได้ลงทะเบียนประเภทนี้ไปแล้ว", code: "duplicate_email" },
+			{ status: 409 },
+		);
+	}
+
+	// Generate unique 6-char uppercase alphanumeric ID
+	const genId = () => {
+		const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no O,0,I,1 to avoid confusion
+		return Array.from(crypto.getRandomValues(new Uint8Array(6)))
+			.map((b) => chars[b % chars.length])
+			.join("");
+	};
+	let id = genId();
+	// Retry on collision (extremely unlikely)
+	for (let i = 0; i < 5; i++) {
+		const exists = await env.DB.prepare("SELECT 1 FROM registrations WHERE id = ?").bind(id).first();
+		if (!exists) break;
+		id = genId();
+	}
 	const token = crypto.randomUUID();
 	const now = Date.now();
 
@@ -108,6 +134,17 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 	} catch {
 		// Queue not available in local dev — continue
 	}
+
+	// Broadcast new registration to admin dashboards
+	try {
+		const doId = env.TOURNAMENT_ROOM.idFromName(slug);
+		const stub = env.TOURNAMENT_ROOM.get(doId);
+		await stub.fetch("https://internal/broadcast", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ type: "register", registration_id: id, registration_type: body.form_id, submitted_at: now }),
+		});
+	} catch {}
 
 	return Response.json({
 		id,

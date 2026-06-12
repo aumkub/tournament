@@ -29,10 +29,14 @@ export default [
 	route("api/admin/:slug/export", "routes/api/admin/export.ts"),
 	route("api/admin/:slug/tournament", "routes/api/admin/tournament.ts"),
 	route("api/admin/:slug/registrants/:id", "routes/api/admin/registrant-delete.ts"),
+	route("api/admin/:slug/checkin-log", "routes/api/admin/checkin-log.ts"),
+	route("api/admin/:slug/uncheckin", "routes/api/admin/uncheckin.ts"),
+	route("api/admin/:slug/clear-registrations", "routes/api/admin/clear-registrations.ts"),
+	route("api/admin/:slug/clear-checkins", "routes/api/admin/clear-checkins.ts"),
 
 	// Admin pages
-	route("admin", "routes/admin/index.tsx"),
-	route("admin/:slug", "routes/admin/dashboard.tsx"),
-	route("admin/:slug/settings", "routes/admin/settings.tsx"),
-	route("admin/:slug/checkin", "routes/admin/checkin.tsx"),
+	route("portal", "routes/admin/index.tsx"),
+	route("portal/:slug", "routes/admin/dashboard.tsx"),
+	route("portal/:slug/settings", "routes/admin/settings.tsx"),
+	route("portal/:slug/checkin", "routes/admin/checkin.tsx"),
 ] satisfies RouteConfig;

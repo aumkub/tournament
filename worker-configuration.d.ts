@@ -12,6 +12,8 @@ declare namespace Cloudflare {
 		BUCKET: R2Bucket;
 		DB: D1Database;
 		EMAIL_QUEUE: Queue;
+		TURNSTILE_SITE_KEY: string;
+		TURNSTILE_SECRET: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

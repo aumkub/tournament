@@ -166,7 +166,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				color: "var(--color-on-dark-soft)"
 			}}>
 				<p>Tournament Registration &amp; Check-in System</p>
-				<p className="text-xs mt-1" style={{ color: "var(--color-on-dark-soft)" }}>
+				<p className="text-smmt-1" style={{ color: "var(--color-on-dark-soft)" }}>
 					Built with Cloudflare Workers &bull; React Router 7
 				</p>
 			</footer>

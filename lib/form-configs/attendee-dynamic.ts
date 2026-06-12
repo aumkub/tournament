@@ -1,4 +1,4 @@
-import type { FormConfig } from "../../types/form-config";
+import type { FormConfig, DataGroup } from "../../types/form-config";
 
 export const attendeeDynamicConfig: FormConfig = {
 	id: "attendee",
@@ -101,6 +101,18 @@ export const attendeeDynamicConfig: FormConfig = {
 					required: true,
 				},
 			],
+		},
+	],
+	groups: [
+		{
+			id: "info",
+			label: { th: "ข้อมูลผู้ชม", en: "Attendee Info" },
+			keys: ["attendance_days", "full_name", "age", "phone", "email", "occupation", "heard_from"],
+		},
+		{
+			id: "consent",
+			label: { th: "ยินยอม", en: "Consent" },
+			keys: ["consent_pdpa", "consent_photo_video"],
 		},
 	],
 };

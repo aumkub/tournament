@@ -20,8 +20,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		"SELECT id, name, slug, photo_url, created_at FROM tournaments ORDER BY created_at DESC",
 	).all();
 
+	const turnstileSiteKey = (env as any).TURNSTILE_SITE_KEY || "";
+
 	if (!session) {
-		return { authenticated: false as const, role: null, tournamentId: null, tournaments: results.results, redirectSlug: null };
+		return { authenticated: false as const, role: null, tournamentId: null, tournaments: results.results, redirectSlug: null, turnstileSiteKey };
 	}
 
 	if (session.role === "assistant") {
@@ -32,6 +34,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			tournamentId: session.tournamentId,
 			tournaments: results.results,
 			redirectSlug: t?.slug || null,
+		turnstileSiteKey,
 		};
 	}
 
@@ -41,6 +44,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		tournamentId: session.tournamentId,
 		tournaments: results.results,
 		redirectSlug: null,
+		turnstileSiteKey,
 	};
 }
 
@@ -48,11 +52,27 @@ export function meta() {
 	return [{ title: "Admin — Tournament Management" }];
 }
 
+// Extend window for Turnstile
+declare global {
+	interface Window {
+		turnstile?: {
+			getResponse: (widgetId?: string) => string | undefined;
+			reset: (widgetId?: string) => void;
+			render: (container: string | HTMLElement, params: object) => string;
+		};
+	}
+}
+
 export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 	const [authenticating, setAuthenticating] = useState(false);
 	const [password, setPassword] = useState("");
+	const [honeypot, setHoneypot] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
 	const [selectedSlug, setSelectedSlug] = useState("");
+	const turnstileRef = useRef<HTMLDivElement>(null);
+	const turnstileWidgetId = useRef<string | null>(null);
+	const siteKey = (loaderData as any).turnstileSiteKey as string;
 	const tournaments = loaderData.tournaments as any[];
 
 	// Create tournament state
@@ -90,9 +110,36 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 
 	useEffect(() => {
 		if (loaderData.authenticated && loaderData.redirectSlug) {
-			window.location.href = `/admin/${loaderData.redirectSlug}/checkin`;
+			window.location.href = `/portal/${loaderData.redirectSlug}/checkin`;
 		}
 	}, [loaderData.authenticated, loaderData.redirectSlug]);
+
+	// Load Turnstile script and render widget when on login view
+	useEffect(() => {
+		if (loaderData.authenticated || !siteKey) return;
+		const existing = document.getElementById("cf-turnstile-script");
+		if (!existing) {
+			const script = document.createElement("script");
+			script.id = "cf-turnstile-script";
+			script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+			script.async = true;
+			script.defer = true;
+			document.head.appendChild(script);
+		}
+		// Render widget once script loads
+		const tryRender = () => {
+			if (window.turnstile && turnstileRef.current && !turnstileWidgetId.current) {
+				turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+					sitekey: siteKey,
+					theme: "light",
+				});
+			}
+		};
+		const interval = setInterval(() => {
+			if (window.turnstile) { tryRender(); clearInterval(interval); }
+		}, 200);
+		return () => clearInterval(interval);
+	}, [loaderData.authenticated, siteKey]);
 
 	const handleCreate = async () => {
 		if (!createForm.name.trim()) {
@@ -140,7 +187,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 			}
 
 			const data = await res.json();
-			window.location.href = `/admin/${data.slug}/settings`;
+			window.location.href = `/portal/${data.slug}/settings`;
 		} catch (err: any) {
 			setCreateError(err.message);
 		} finally {
@@ -153,6 +200,17 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 		const handleLogin = async () => {
 			if (!password) { setError("กรุณาใส่รหัสผ่าน"); return; }
 			if (!selectedSlug) { setError("กรุณาเลือกทัวร์นาเมนต์"); return; }
+
+			// Honeypot — bots fill hidden field, humans don't
+			if (honeypot) return;
+
+			// Get Turnstile token
+			const turnstileToken = siteKey && window.turnstile ? window.turnstile.getResponse(turnstileWidgetId.current ?? undefined) : undefined;
+			if (siteKey && !turnstileToken) {
+				setError("กรุณายืนยัน Turnstile ก่อน");
+				return;
+			}
+
 			setAuthenticating(true);
 			setError(null);
 
@@ -160,17 +218,25 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 				const res = await fetch(`/api/auth/${selectedSlug}`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ password }),
+					body: JSON.stringify({ password, turnstileToken, website: honeypot || undefined }),
 				});
 				const data = await res.json();
-				if (!res.ok) throw new Error(data.error || "รหัสผ่านไม่ถูกต้อง");
+				if (!res.ok) {
+					if (typeof data.attemptsLeft === "number") setAttemptsLeft(data.attemptsLeft);
+					throw new Error(data.error || "รหัสผ่านไม่ถูกต้อง");
+				}
+				setAttemptsLeft(null);
 				if (data.role === "assistant") {
-					window.location.href = `/admin/${selectedSlug}/checkin`;
+					window.location.href = `/portal/${selectedSlug}/checkin`;
 				} else {
 					window.location.reload();
 				}
 			} catch (err: any) {
 				setError(err.message);
+				// Reset Turnstile on failure so user can retry
+				if (siteKey && window.turnstile) {
+					window.turnstile.reset(turnstileWidgetId.current ?? undefined);
+				}
 			} finally {
 				setAuthenticating(false);
 			}
@@ -181,12 +247,20 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 				<div className="card">
 					<div className="flex items-center justify-center gap-2 mb-lg">
 						<IconLock size={20} color="var(--color-muted)" />
-						<h2 className="text-[20px] m-0 font-semibold">เข้าสู่ระบบ Admin</h2>
+						<h2 className="!text-[20px] m-0 font-semibold">เข้าสู่ระบบ Admin</h2>
+					</div>
+
+					{/* Honeypot — visually hidden, bots fill this */}
+					<div style={{ position: "absolute", left: "-9999px", opacity: 0, pointerEvents: "none" }} aria-hidden="true">
+						<input tabIndex={-1} autoComplete="off" type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
 					</div>
 
 					{error && (
 						<div className="p-sm p-md bg-[#fef2f2] border border-error rounded-md text-error text-sm mb-md">
 							{error}
+							{attemptsLeft !== null && attemptsLeft > 0 && (
+								<div className="mt-1 font-medium">เหลืออีก {attemptsLeft} ครั้ง ก่อนถูกล็อก</div>
+							)}
 						</div>
 					)}
 
@@ -209,6 +283,12 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						<input className="input w-full" type="password" placeholder="ใส่รหัสผ่าน..." value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} />
 					</div>
 
+					{siteKey && (
+						<div className="mb-md flex justify-center">
+							<div ref={turnstileRef} />
+						</div>
+					)}
+
 					<button className="btn btn-primary w-full" onClick={handleLogin} disabled={authenticating || tournaments.length === 0}>
 						{authenticating ? "กำลังตรวจสอบ..." : "เข้าสู่ระบบ"}
 					</button>
@@ -229,7 +309,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 					<h2 className="!text-[26px] font-semibold m-0">
 						{isSuperAdmin ? "Tournaments" : (sessionTournament?.name || "Dashboard")}
 					</h2>
-					<span className="text-xs text-muted">
+					<span className="text-sm text-muted">
 						{role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : "Assistant"}
 					</span>
 				</div>
@@ -255,7 +335,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 							return (
 								<a
 									key={t.id}
-									href={`/admin/${t.slug}`}
+									href={`/portal/${t.slug}`}
 									className="card !p-0 flex flex-col overflow-hidden no-underline transition-shadow"
 								>
 									<div className="w-full overflow-hidden" style={{ aspectRatio: "16/7", background: "var(--color-surface-soft)" }}>
@@ -269,7 +349,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 									</div>
 									<div className="p-md p-lg">
 										<h3 className="!text-[18px] mb-1 text-ink">{t.name}</h3>
-										<p className="text-xs text-muted mt-1">slug: {t.slug}</p>
+										<p className="text-sm text-muted mt-1">slug: {t.slug}</p>
 									</div>
 								</a>
 							);
@@ -282,7 +362,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						const coverUrl = sessionTournament.photo_url ? `/api/file?key=${encodeURIComponent(sessionTournament.photo_url)}` : null;
 						return (
 							<a
-								href={`/admin/${sessionTournament.slug}`}
+								href={`/portal/${sessionTournament.slug}`}
 								className="card p-0 flex flex-col overflow-hidden no-underline transition-shadow"
 							>
 								<div className="w-full overflow-hidden" style={{ aspectRatio: "16/7", background: "var(--color-surface-soft)" }}>
@@ -296,7 +376,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 								</div>
 								<div className="p-md p-lg">
 									<h3 className="text-[18px] mb-1 text-ink">{sessionTournament.name}</h3>
-									<p className="text-xs text-muted m-0">
+									<p className="text-sm text-muted m-0">
 										<IconArrowRight size={14} /> เข้าสู่ Dashboard
 									</p>
 								</div>
