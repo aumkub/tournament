@@ -14,7 +14,7 @@ const PAGE_LABELS: Record<Props["current"], string> = {
 	settings: "Settings",
 };
 
-const navLinkBase = "inline-flex items-center gap-1.5 !text-[10px] font-medium no-underline px-3 py-1.5 rounded-md transition-colors whitespace-nowrap";
+const navLinkBase = "inline-flex items-center gap-1.5 font-medium no-underline px-3 py-1.5 rounded-md transition-colors whitespace-nowrap";
 const navLinkActive = `${navLinkBase} text-primary bg-[rgba(204,120,92,0.1)]`;
 const navLinkInactive = `${navLinkBase} text-muted hover:text-body hover:bg-surface-soft`;
 
@@ -35,7 +35,7 @@ export function AdminNav({ slug, name, role, current }: Props) {
 				<div className="flex items-center gap-1 min-w-0 flex-1">
 					{/* Brand */}
 					<a href="/portal" className="flex items-center gap-1.5 text-muted hover:text-body no-underline transition-colors flex-shrink-0">
-						<span className="hidden sm:inline text-sm font-semibold">Tournament</span>
+						<span className="hidden sm:inline text-sm font-semibold">all Thailand</span>
 					</a>
 
 					<Chevron />
@@ -75,20 +75,20 @@ export function AdminNav({ slug, name, role, current }: Props) {
 				<div className="flex items-center gap-1 flex-shrink-0">
 					{isAdmin && (
 						<a href={`/portal/${slug}`} className={current === "dashboard" ? navLinkActive : navLinkInactive}>
-							<span className="hidden md:inline">Dashboard</span>
+							<span className="hidden md:inline md:!text-sm">Dashboard</span>
 							<span className="md:hidden text-xs">DB</span>
 						</a>
 					)}
 
 					<a href={`/portal/${slug}/checkin`} className={current === "checkin" ? navLinkActive : navLinkInactive}>
 						<IconQrCode size={15} />
-						<span className="hidden md:inline">Check-in</span>
+						<span className="hidden md:inline md:!text-sm">Check-in</span>
 					</a>
 
 					{isSuperAdmin && (
 						<a href={`/portal/${slug}/settings`} className={current === "settings" ? navLinkActive : navLinkInactive}>
 							<IconSettings size={15} />
-							<span className="hidden md:inline">Settings</span>
+							<span className="hidden md:inline md:!text-sm">Settings</span>
 						</a>
 					)}
 				</div>

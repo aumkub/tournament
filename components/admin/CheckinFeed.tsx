@@ -89,11 +89,11 @@ export function CheckinFeed({ slug, typeLabels = {} }: CheckinFeedProps) {
 					<span className="!text-xs text-muted">{filtered.length} คน</span>
 				</div>
 			</div>
-			<div className="flex flex-col overflow-y-auto" style={{ maxHeight: 320 }}>
+			<div className="flex flex-col overflow-y-auto bg-surface-card p-2 rounded-sm" style={{ maxHeight: 320 }}>
 					{filtered.map((evt, i) => (
 					<div
 						key={`${evt.checked_in_at}-${i}`}
-						className={`flex items-start gap-2 px-2 py-1.5 rounded-md ${i === 0 && !filterType ? "bg-[#f0fdf4]" : ""}`}
+						className={`flex items-start gap-2 px-3 py-1.5 rounded-md ${i === 0 && !filterType ? "bg-[#f0fdf4]" : ""}`}
 					>
 						<span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2 ${i === 0 ? "bg-success" : "bg-muted-soft"}`} />
 						<div className="flex flex-col flex-1 min-w-0">

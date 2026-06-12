@@ -4,7 +4,7 @@ import { FORM_CONFIGS } from "../../lib/form-configs/index";
 
 export function meta({}: Route.MetaArgs) {
 	return [
-		{ title: "Tournament Registration System" },
+		{ title: "all Thailand Registration System" },
 		{ name: "description", content: "ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน" },
 	];
 }
@@ -132,7 +132,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 			{/* Hero */}
 			<div className="max-w-[800px] mx-auto px-lg py-xxl text-center">
 				<h1 className="!text-[clamp(32px,6vw,48px)] mb-md" style={{ letterSpacing: "-1.5px" }}>
-					Tournament Registration
+					all Thailand Registration
 				</h1>
 				<p className="text-[clamp(14px,2.5vw,18px)] mx-auto leading-relaxed max-w-[600px]" style={{ color: "var(--color-body)" }}>
 					ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน
@@ -165,7 +165,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				background: "var(--color-surface-dark)",
 				color: "var(--color-on-dark-soft)"
 			}}>
-				<p>Tournament Registration &amp; Check-in System</p>
+				<p>all Thailand Registration &amp; Check-in System</p>
 				<p className="text-smmt-1" style={{ color: "var(--color-on-dark-soft)" }}>
 					Built with Cloudflare Workers &bull; React Router 7
 				</p>

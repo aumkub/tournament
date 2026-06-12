@@ -54,7 +54,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export function meta() {
-	return [{ title: "Admin — Tournament Management" }];
+	return [{ title: "Admin — all Thailand" }];
 }
 
 
@@ -109,7 +109,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 
 	const handleCreate = async () => {
 		if (!createForm.name.trim()) {
-			setCreateError("กรุณาใส่ชื่อทัวร์นาเมนต์");
+			setCreateError("กรุณาใส่ชื่อรายการ");
 			return;
 		}
 		if (!createForm.password_super_admin.trim()) {
@@ -149,7 +149,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 
 			if (!res.ok) {
 				const data = await res.json();
-				throw new Error(data.error || "ไม่สามารถสร้างทัวร์นาเมนต์ได้");
+				throw new Error(data.error || "ไม่สามารถสร้างรายการได้");
 			}
 
 			const data = await res.json();
@@ -165,7 +165,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 	if (!loaderData.authenticated) {
 		const handleLogin = async () => {
 			if (!password) { setError("กรุณาใส่รหัสผ่าน"); return; }
-			if (!selectedSlug) { setError("กรุณาเลือกทัวร์นาเมนต์"); return; }
+			if (!selectedSlug) { setError("กรุณาเลือกรายการ"); return; }
 
 			// Honeypot — bots fill hidden field, humans don't
 			if (honeypot) return;
@@ -220,12 +220,12 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 					)}
 
 					<div className="mb-md">
-						<label className="label">ทัวร์นาเมนต์</label>
+						<label className="label">รายการ</label>
 						{tournaments.length === 0 ? (
-							<p className="text-muted text-sm">ยังไม่มีทัวร์นาเมนต์ในระบบ</p>
+							<p className="text-muted text-sm">ยังไม่มีรายการในระบบ</p>
 						) : (
 							<select className="select w-full" value={selectedSlug} onChange={(e) => setSelectedSlug(e.target.value)}>
-								<option value="" disabled>-- เลือกทัวร์นาเมนต์ --</option>
+								<option value="" disabled>-- เลือกรายการ --</option>
 								{tournaments.map((t: any) => (
 									<option key={t.id} value={t.slug}>{t.name}</option>
 								))}
@@ -328,7 +328,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 			<div className="flex justify-between items-center mb-lg">
 				<div>
 					<h2 className="!text-[26px] font-semibold m-0">
-						{isSuperAdmin ? "Tournaments" : (sessionTournament?.name || "Dashboard")}
+						{isSuperAdmin ? "all Thailand" : (sessionTournament?.name || "Dashboard")}
 					</h2>
 					<span className="text-sm text-muted">
 						{role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : "Assistant"}
@@ -336,7 +336,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 				</div>
 				{isSuperAdmin && (
 					<button className="btn btn-primary" onClick={() => createDialogRef.current?.showModal()}>
-						<IconPlus size={16} /> สร้างทัวร์นาเมนต์
+						<IconPlus size={16} /> สร้างรายการ
 					</button>
 				)}
 			</div>
@@ -344,9 +344,9 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 			{isSuperAdmin ? (
 				tournaments.length === 0 ? (
 					<div className="card text-center text-muted">
-						<p className="text-base mb-md">ยังไม่มีทัวร์นาเมนต์</p>
+						<p className="text-base mb-md">ยังไม่มีรายการ</p>
 						<button className="btn btn-primary" onClick={() => createDialogRef.current?.showModal()}>
-							<IconPlus size={16} /> สร้างทัวร์นาเมนต์ใหม่
+							<IconPlus size={16} /> สร้างรายการใหม่
 						</button>
 					</div>
 				) : (
@@ -362,7 +362,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						<TournamentCard t={sessionTournament} href={`/portal/${sessionTournament.slug}`} />
 					) : (
 						<div className="card text-center text-muted">
-							ไม่พบทัวร์นาเมนต์ของคุณ — กรุณาเข้าสู่ระบบใหม่
+							ไม่พบรายการของคุณ — กรุณาเข้าสู่ระบบใหม่
 						</div>
 					)}
 				</div>
@@ -372,7 +372,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 			<dialog ref={createDialogRef} className="modal">
 				<div className="modal-content max-w-[560px]">
 					<div className="flex justify-between items-center mb-lg">
-						<h2 className="text-[20px] m-0">สร้างทัวร์นาเมนต์ใหม่</h2>
+						<h2 className="text-[20px] m-0">สร้างรายการใหม่</h2>
 						<button className="btn btn-sm btn-ghost btn-circle" onClick={() => createDialogRef.current?.close()}>
 							<IconX size={16} />
 						</button>
@@ -386,7 +386,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 
 					<div className="flex flex-col gap-md">
 						<div>
-							<label className="label">ชื่อทัวร์นาเมนต์ *</label>
+							<label className="label">ชื่อรายการ *</label>
 							<input className="input w-full" placeholder="เช่น Junior Golf Open 2026" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
 						</div>
 						<div>
@@ -444,7 +444,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 					<div className="modal-action">
 						<button className="btn btn-ghost" onClick={() => createDialogRef.current?.close()}>ยกเลิก</button>
 						<button className="btn btn-primary" onClick={handleCreate} disabled={creating}>
-							{creating ? "กำลังสร้าง..." : (<><IconPlus size={16} /> สร้างทัวร์นาเมนต์</>)}
+							{creating ? "กำลังสร้าง..." : (<><IconPlus size={16} /> สร้างรายการ</>)}
 						</button>
 					</div>
 				</div>
