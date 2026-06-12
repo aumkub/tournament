@@ -453,7 +453,7 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 	min-height: 40px;
 	font-family: var(--font-body);
 	font-size: 16px;
-	padding: 10px 14px;
+	padding: 6px 14px;
 	color: var(--color-ink);
 	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 	outline: none;
@@ -462,7 +462,7 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 .input::placeholder,
 .select::placeholder,
 .textarea::placeholder {
-	color: var(--color-muted-soft);
+	color: var(--color-body);
 }
 
 .input:focus,
@@ -1053,27 +1053,6 @@ p, span, li, td, th, a, option {
 .py-section {
 	padding-top: var(--spacing-section);
 	padding-bottom: var(--spacing-section);
-}
-
-/* ──── Display utilities ───────────────────────────── */
-
-.hidden {
-	display: none;
-}
-.block {
-	display: block;
-}
-.inline-block {
-	display: inline-block;
-}
-.flex {
-	display: flex;
-}
-.inline-flex {
-	display: inline-flex;
-}
-.grid {
-	display: grid;
 }
 
 /* ──── Flex utilities ─────────────────────────────── */

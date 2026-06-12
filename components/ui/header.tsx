@@ -32,11 +32,11 @@ export function Header() {
 					<span className="inline-flex items-center justify-center w-7 h-7 bg-primary text-white text-sm font-bold rounded-md leading-none">
 						T
 					</span>
-					<span className="text-sm font-semibold text-ink">Tournament</span>
+					<span className="text-base font-semibold text-ink">Tournament</span>
 				</a>
 
 				{/* Desktop nav — hidden on mobile */}
-				<nav className="hidden md:flex items-center gap-xs">
+				<nav className="hidden sm:flex items-center gap-xs">
 					<a href="/" className={navLinkClass}>หน้าหลัก</a>
 
 					{authenticated ? (
@@ -68,7 +68,7 @@ export function Header() {
 
 				{/* Hamburger — mobile only */}
 				<button
-					className="md:hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-muted hover:bg-surface-soft transition-colors border-none bg-transparent cursor-pointer"
+					className="sm:hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-muted hover:bg-surface-soft transition-colors border-none bg-transparent cursor-pointer"
 					onClick={() => setMenuOpen(!menuOpen)}
 					aria-label="Toggle menu"
 				>
@@ -78,7 +78,7 @@ export function Header() {
 
 			{/* Mobile dropdown */}
 			{menuOpen && (
-				<div className="md:hidden border-t border-hairline px-md py-sm bg-canvas flex flex-col gap-xs">
+				<div className="sm:hidden border-t border-hairline px-md py-sm bg-canvas flex flex-col gap-xs">
 					<a
 						href="/"
 						onClick={() => setMenuOpen(false)}

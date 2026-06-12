@@ -68,12 +68,12 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 		<div>
 			<div className="grid gap-lg" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
 				<div className="card">
-					<p className="text-xs text-muted mb-1">ผู้เข้าแข่งขัน</p>
+					<p className="text-2xl text-black mb-1">ผู้เข้าแข่งขัน</p>
 					<p className="text-[32px] font-serif text-ink m-0">
 						{stats.competitors}
 						{stats.limits.competitor && <span className="text-base text-muted font-normal"> / {stats.limits.competitor}</span>}
 					</p>
-					<p className="text-xs text-muted mt-1">
+					<p className="text-sm text-muted mt-1">
 						เช็คอินแล้ว {stats.competitorsCheckedIn}
 					</p>
 					{competitorLeft !== null && (
@@ -89,12 +89,12 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 					)}
 				</div>
 				<div className="card">
-					<p className="text-xs text-muted mb-1">ผู้เข้าร่วมงาน</p>
+					<p className="text-2xl text-black mb-1">ผู้เข้าร่วมงาน</p>
 					<p className="text-[32px] font-serif text-ink m-0">
 						{stats.attendees}
 						{stats.limits.attendee && <span className="text-base text-muted font-normal"> / {stats.limits.attendee}</span>}
 					</p>
-					<p className="text-xs text-muted mt-1">
+					<p className="text-sm text-muted mt-1">
 						เช็คอินแล้ว {stats.attendeesCheckedIn}
 					</p>
 					{attendeeLeft !== null && (
@@ -110,12 +110,12 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 					)}
 				</div>
 				<div className="card">
-					<p className="text-xs text-muted mb-1">ทั้งหมด</p>
+					<p className="text-2xl text-black mb-1">ทั้งหมด</p>
 					<p className="text-[32px] font-serif text-ink m-0">
 						{stats.total}
 						{stats.limits.total && <span className="text-base text-muted font-normal"> / {stats.limits.total}</span>}
 					</p>
-					<p className="text-xs text-muted mt-1">
+					<p className="text-sm text-muted mt-1">
 						เช็คอินแล้ว {stats.checkedIn}
 					</p>
 					{totalLeft !== null && (
@@ -131,11 +131,11 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 					)}
 				</div>
 				<div className="card">
-					<p className="text-xs text-muted mb-1">ความคืบหน้า</p>
+					<p className="text-2xl text-black mb-1">ความคืบหน้า</p>
 					<p className="text-[32px] font-serif text-primary m-0">
 						{checkinPercent}%
 					</p>
-					<p className="text-xs text-muted mt-1">
+					<p className="text-sm text-muted mt-1">
 						{stats.checkedIn} / {stats.total}
 					</p>
 					<div className="progress-bar mt-2">

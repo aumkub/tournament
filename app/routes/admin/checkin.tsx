@@ -8,7 +8,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
 	const slug = params.slug;
 
-	// Verify session — assistant+ required
 	const token = parseCookie(request.headers.get("Cookie"));
 	const session = await verifySession(env.SESSIONS, token || "");
 	if (!session || !hasRole(session, "assistant")) {
@@ -41,13 +40,11 @@ export default function CheckinPage({ loaderData }: Route.ComponentProps) {
 	return (
 		<>
 			<AdminNav slug={loaderData.slug} name={loaderData.name} role={loaderData.role} current="checkin" />
-			<div className="max-w-[480px] mx-auto px-lg">
-				<h1 className="text-[24px] text-center mb-xs">
-					QR Scanner
-				</h1>
-				<p className="text-center text-muted text-sm mb-xl">
-					{loaderData.name}
-				</p>
+			<div className="max-w-[440px] mx-auto px-lg py-xl">
+				<div className="text-center mb-lg">
+					<h2 className="text-[20px] font-semibold m-0 mb-1">QR Scanner</h2>
+					<p className="text-sm text-muted m-0">{loaderData.name}</p>
+				</div>
 				<QRScanner slug={loaderData.slug} />
 			</div>
 		</>

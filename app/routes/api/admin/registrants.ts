@@ -12,7 +12,9 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 	const slug = params.slug;
 	const url = new URL(request.url);
 	const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
-	const limit = 20;
+	const limit = [10, 20, 50, 100].includes(parseInt(url.searchParams.get("limit") || "20"))
+		? parseInt(url.searchParams.get("limit")!)
+		: 20;
 	const offset = (page - 1) * limit;
 	const type = url.searchParams.get("type") || "";
 	const checkedIn = url.searchParams.get("checked_in");

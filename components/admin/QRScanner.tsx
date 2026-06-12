@@ -27,18 +27,15 @@ export function QRScanner({ slug }: QRScannerProps) {
 	const handleScan = useCallback(
 		async (token: string) => {
 			if (!token.trim()) return;
-
 			try {
 				const res = await fetch(`/api/checkin/${slug}`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ token: token.trim() }),
 				});
-
 				const data = await res.json();
 				setResult(data);
-
-				setTimeout(() => setResult(null), 2000);
+				setTimeout(() => setResult(null), 2500);
 			} catch (err: any) {
 				setResult({ status: "error", error: err.message });
 			}
@@ -73,20 +70,19 @@ export function QRScanner({ slug }: QRScannerProps) {
 		return () => { stopCamera(); };
 	}, [stopCamera]);
 
-	const resultColor = result
-		? result.status === "success"
-			? "var(--color-success)"
-			: result.status === "already_checked_in"
-				? "var(--color-warning)"
-				: "var(--color-error)"
-		: "";
+	const resultBg =
+		result?.status === "success"
+			? "rgba(22,163,74,0.92)"
+			: result?.status === "already_checked_in"
+			? "rgba(180,120,0,0.92)"
+			: "rgba(185,28,28,0.92)";
 
 	return (
-		<div className="max-w-[480px] mx-auto">
-			{/* Camera View */}
+		<div>
+			{/* Camera viewport */}
 			<div
-				className="relative w-full rounded-lg overflow-hidden mb-lg"
-				style={{ aspectRatio: "1", background: "var(--color-surface-dark)" }}
+				className="relative w-full rounded-xl overflow-hidden mb-md"
+				style={{ aspectRatio: "1/1", background: "#0f0f0e" }}
 			>
 				<video
 					ref={videoRef}
@@ -94,80 +90,75 @@ export function QRScanner({ slug }: QRScannerProps) {
 					muted
 					playsInline
 					className="w-full h-full object-cover"
+					style={{ opacity: scanning ? 1 : 0 }}
 				/>
 
-				{/* Scanner overlay */}
-				{scanning && (
-					<div
-						style={{
-							position: "absolute", inset: 0,
-							display: "flex", alignItems: "center", justifyContent: "center",
-							background: "rgba(0,0,0,0.1)",
-						}}
-					>
+				{/* Idle state */}
+				{!scanning && !result && (
+					<div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
 						<div style={{
-							width: "70%",
-							aspectRatio: "1",
-							border: "2px dashed " + (result ? resultColor : "white"),
-							borderRadius: "var(--radius-lg)",
-						}} />
+							width: 72, height: 72, borderRadius: "var(--radius-lg)",
+							background: "rgba(255,255,255,0.06)",
+							display: "flex", alignItems: "center", justifyContent: "center",
+						}}>
+							<IconQrCode size={36} color="rgba(255,255,255,0.35)" />
+						</div>
+						<p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, margin: 0 }}>
+							กดเปิดกล้องเพื่อสแกน QR
+						</p>
 					</div>
 				)}
 
-				{/* Scan result overlay */}
+				{/* Corner brackets scanner frame */}
+				{scanning && (
+					<div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: "none" }}>
+						<div style={{ position: "relative", width: "65%", aspectRatio: "1/1" }}>
+							{/* Top-left */}
+							<span style={{ position: "absolute", top: 0, left: 0, width: 24, height: 24, borderTop: "3px solid white", borderLeft: "3px solid white", borderRadius: "4px 0 0 0", opacity: 0.9 }} />
+							{/* Top-right */}
+							<span style={{ position: "absolute", top: 0, right: 0, width: 24, height: 24, borderTop: "3px solid white", borderRight: "3px solid white", borderRadius: "0 4px 0 0", opacity: 0.9 }} />
+							{/* Bottom-left */}
+							<span style={{ position: "absolute", bottom: 0, left: 0, width: 24, height: 24, borderBottom: "3px solid white", borderLeft: "3px solid white", borderRadius: "0 0 0 4px", opacity: 0.9 }} />
+							{/* Bottom-right */}
+							<span style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderBottom: "3px solid white", borderRight: "3px solid white", borderRadius: "0 0 4px 0", opacity: 0.9 }} />
+						</div>
+					</div>
+				)}
+
+				{/* Result overlay */}
 				{result && (
 					<div
-						style={{
-							position: "absolute", inset: 0,
-							display: "flex", alignItems: "center", justifyContent: "center",
-							background: resultColor === "var(--color-success)"
-								? "rgba(93, 184, 114, 0.9)"
-								: resultColor === "var(--color-warning)"
-									? "rgba(212, 160, 23, 0.9)"
-									: "rgba(198, 69, 69, 0.9)",
-						}}
+						className="absolute inset-0 flex items-center justify-center"
+						style={{ background: resultBg, backdropFilter: "blur(2px)" }}
 					>
-						<div style={{ textAlign: "center", color: "white", padding: "var(--spacing-lg)" }}>
+						<div style={{ textAlign: "center", color: "white", padding: "var(--spacing-xl)" }}>
 							{result.status === "success" && (
 								<>
-									<IconCheckCircleFilled size={48} color="white" />
-									<p style={{ fontSize: 18, fontWeight: 600, margin: "var(--spacing-sm) 0 4px" }}>
-										เช็คอินสำเร็จ!
-									</p>
-									<p style={{ fontSize: 14, margin: 0 }}>{result.name}</p>
-									<p style={{ fontSize: 12, opacity: 0.9, margin: "4px 0 0" }}>
+									<IconCheckCircleFilled size={52} color="white" />
+									<p style={{ fontSize: 20, fontWeight: 700, margin: "12px 0 6px" }}>เช็คอินสำเร็จ!</p>
+									<p style={{ fontSize: 15, margin: 0, fontWeight: 500 }}>{result.name}</p>
+									<p style={{ fontSize: 12, opacity: 0.85, margin: "4px 0 0" }}>
 										{result.type === "competitor" ? "ผู้เข้าแข่งขัน" : "ผู้เข้าร่วมงาน"}
 									</p>
 								</>
 							)}
 							{result.status === "already_checked_in" && (
 								<>
-									<IconWarningFilled size={48} color="white" />
-									<p style={{ fontSize: 18, fontWeight: 600, margin: "var(--spacing-sm) 0 4px" }}>
-										เช็คอินแล้ว
-									</p>
-									<p style={{ fontSize: 14, margin: 0 }}>{result.name}</p>
-									<p style={{ fontSize: 12, opacity: 0.9, margin: "4px 0 0" }}>
+									<IconWarningFilled size={52} color="white" />
+									<p style={{ fontSize: 20, fontWeight: 700, margin: "12px 0 6px" }}>เช็คอินแล้ว</p>
+									<p style={{ fontSize: 15, margin: 0, fontWeight: 500 }}>{result.name}</p>
+									<p style={{ fontSize: 12, opacity: 0.85, margin: "4px 0 0" }}>
 										{new Date(result.checked_in_at).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" })}
 									</p>
 								</>
 							)}
-							{result.status === "not_found" && (
+							{(result.status === "not_found" || result.status === "error") && (
 								<>
-									<IconXCircleFilled size={48} color="white" />
-									<p style={{ fontSize: 16, fontWeight: 600, margin: "var(--spacing-md) 0 4px" }}>
-										ไม่พบ QR
+									<IconXCircleFilled size={52} color="white" />
+									<p style={{ fontSize: 18, fontWeight: 700, margin: "12px 0 6px" }}>
+										{result.status === "not_found" ? "ไม่พบ QR Code" : "ข้อผิดพลาด"}
 									</p>
-									<p style={{ fontSize: 14, margin: 0 }}>{result.error}</p>
-								</>
-							)}
-							{result.status === "error" && (
-								<>
-									<IconXCircleFilled size={48} color="white" />
-									<p style={{ fontSize: 16, fontWeight: 600, margin: "var(--spacing-md) 0 4px" }}>
-										ข้อผิดพลาด
-									</p>
-									<p style={{ fontSize: 14, margin: 0 }}>{result.error}</p>
+									<p style={{ fontSize: 13, opacity: 0.85, margin: 0 }}>{result.error}</p>
 								</>
 							)}
 						</div>
@@ -175,30 +166,42 @@ export function QRScanner({ slug }: QRScannerProps) {
 				)}
 			</div>
 
-			{/* Controls */}
-			<div style={{ display: "flex", gap: "var(--spacing-sm)" }}>
+			{/* Camera toggle button */}
+			<div className="flex gap-sm mb-lg">
 				{scanning ? (
-					<button
-						className="btn btn-secondary flex-1"
-						onClick={stopCamera}
-					>
+					<button className="btn btn-secondary flex-1" onClick={stopCamera}>
 						หยุดสแกน
 					</button>
 				) : (
-					<button
-						className="btn btn-primary flex-1"
-						onClick={startCamera}
-					>
+					<button className="btn btn-primary flex-1" onClick={startCamera}>
 						<IconCamera size={16} /> เปิดกล้อง
 					</button>
 				)}
+			</div>
 
-				<button
-					className="btn btn-secondary"
-					onClick={() => document.getElementById("html5-qrcode-barcode-scanner")?.remove()}
-				>
-					<IconQrCode size={16} />
-				</button>
+			{/* Manual token input */}
+			<div className="card">
+				<p className="text-xs text-muted mb-sm m-0 font-medium">ป้อน Token ด้วยตนเอง</p>
+				<div className="flex gap-sm">
+					<input
+						className="input flex-1"
+						placeholder="วาง QR token ที่นี่..."
+						value={manualToken}
+						onChange={(e) => setManualToken(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") {
+								handleScan(manualToken);
+								setManualToken("");
+							}
+						}}
+					/>
+					<button
+						className="btn btn-secondary"
+						onClick={() => { handleScan(manualToken); setManualToken(""); }}
+					>
+						เช็คอิน
+					</button>
+				</div>
 			</div>
 		</div>
 	);

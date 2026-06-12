@@ -83,7 +83,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 				{/* Header */}
 				<div className="mb-xl flex items-start justify-between gap-md flex-wrap">
 					<div>
-						<h1 className="text-[clamp(22px,4vw,28px)] mb-1">{loaderData.name}</h1>
+						<h1 className="!text-[clamp(22px,4vw,28px)] !mb-1">{loaderData.name}</h1>
 						<p className="text-sm text-muted m-0">slug: {loaderData.slug}</p>
 					</div>
 					<div className="flex gap-sm flex-wrap">
@@ -114,7 +114,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 				{/* Two-column layout */}
 				<div className="grid grid-cols-1 gap-lg md:grid-cols-[1fr_320px]">
 					<div>
-						<h2 className="text-[20px] mb-lg">รายชื่อผู้ลงทะเบียน</h2>
+						<h2 className="text-2xl mb-lg">รายชื่อผู้ลงทะเบียน</h2>
 						<RegistrantTable slug={loaderData.slug} typeLabels={loaderData.typeLabels} role={loaderData.role} />
 					</div>
 					<div>

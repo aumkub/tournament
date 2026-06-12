@@ -14,7 +14,6 @@
 		"publish": true
 	},
 	"dependencies": {
-		"daisyui": "^5.5.20",
 		"drizzle-orm": "^0.45.2",
 		"isbot": "5.1.32",
 		"papaparse": "^5.5.3",

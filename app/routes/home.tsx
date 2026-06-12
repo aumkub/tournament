@@ -64,7 +64,7 @@ function TournamentCard({ t }: { t: any }) {
 					</div>
 				)}
 				{isOpen && (
-					<span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-md" style={{ background: "rgba(20,20,19,0.55)", color: "#fff", backdropFilter: "blur(6px)" }}>
+					<span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 !text-[13px] font-semibold rounded-md" style={{ background: "rgba(20,20,19,0.55)", color: "#fff", backdropFilter: "blur(6px)" }}>
 						<span className="w-1.5 h-1.5 rounded-full bg-[#4ade80] flex-shrink-0" style={{ boxShadow: "0 0 0 2px rgba(74,222,128,0.3)" }} />
 						เปิดรับสมัคร
 					</span>
@@ -76,7 +76,7 @@ function TournamentCard({ t }: { t: any }) {
 				<h3 className="text-xl mb-sm">{t.name}</h3>
 
 				{!isOpen && (
-					<p className="text-sm mb-md" style={{
+					<p className="!text-sm mb-md" style={{
 						color: now < t.registration_open_at ? "var(--color-warning)" : "var(--color-muted)",
 						margin: 0
 					}}>
@@ -93,7 +93,7 @@ function TournamentCard({ t }: { t: any }) {
 							<a
 								key={f.formId}
 								href={`/${t.slug}/register/${f.urlSlug}`}
-								className={`btn ${i === 0 ? "btn-primary" : "btn-secondary"} text-sm min-w-[120px] flex-1`}
+								className={`btn ${i === 0 ? "btn-primary" : "btn-secondary"} text-base min-w-[120px] flex-1`}
 							>
 								ลงทะเบียน{f.label}
 							</a>
@@ -131,7 +131,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 		<div className="min-h-screen">
 			{/* Hero */}
 			<div className="max-w-[800px] mx-auto px-lg py-xxl text-center">
-				<h1 className="text-[clamp(32px,6vw,48px)] mb-md" style={{ letterSpacing: "-1.5px" }}>
+				<h1 className="!text-[clamp(32px,6vw,48px)] mb-md" style={{ letterSpacing: "-1.5px" }}>
 					Tournament Registration
 				</h1>
 				<p className="text-[clamp(14px,2.5vw,18px)] mx-auto leading-relaxed max-w-[600px]" style={{ color: "var(--color-body)" }}>
@@ -143,7 +143,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 			{/* Tournament List */}
 			<div className="max-w-[1000px] mx-auto px-lg pb-section">
-				<h2 className="text-2xl mb-xl text-center">
+				<h2 className="!text-2xl mb-xl text-center">
 					ทัวร์นาเมนต์ที่เปิดรับสมัคร
 				</h2>
 

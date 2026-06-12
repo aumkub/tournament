@@ -55,6 +55,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 	const [filterType, setFilterType] = useState("");
 	const [filterCheckedIn, setFilterCheckedIn] = useState("");
 	const [search, setSearch] = useState("");
+	const [pageSize, setPageSize] = useState(20);
 	const [selectedReg, setSelectedReg] = useState<Registrant | null>(null);
 	const [deleting, setDeleting] = useState(false);
 	const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -62,12 +63,12 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 
 	useEffect(() => {
 		fetchRegistrants();
-	}, [slug, page, filterType, filterCheckedIn, search]);
+	}, [slug, page, pageSize, filterType, filterCheckedIn, search]);
 
 	const fetchRegistrants = async () => {
 		setLoading(true);
 		try {
-			const params = new URLSearchParams({ page: String(page) });
+			const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
 			if (filterType) params.set("type", filterType);
 			if (filterCheckedIn) params.set("checked_in", filterCheckedIn);
 			if (search) params.set("search", search);
@@ -100,7 +101,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 		}
 	};
 
-	const totalPages = Math.ceil(total / 20);
+	const totalPages = Math.ceil(total / pageSize);
 
 	return (
 		<div>
@@ -217,29 +218,48 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 			</div>
 
 			{/* Pagination */}
-			{totalPages > 1 && (
-				<div style={{ display: "flex", gap: "var(--spacing-sm)", marginTop: "var(--spacing-md)", justifyContent: "center", alignItems: "center" }}>
-					<button
-						className="btn btn-secondary"
-						disabled={page <= 1}
-						onClick={() => setPage(page - 1)}
-						style={{ padding: "8px 12px", minHeight: "auto" }}
+			<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--spacing-md)", paddingBottom: "var(--spacing-xxl)", flexWrap: "wrap", gap: "var(--spacing-sm)" }}>
+				{/* Rows per page */}
+				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+					<span style={{ fontSize: 13, color: "var(--color-muted)" }}>แสดง</span>
+					<select
+						className="select"
+						style={{ width: "auto", padding: "4px 10px", minHeight: "auto", fontSize: 13 }}
+						value={pageSize}
+						onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
 					>
-						ก่อนหน้า
-					</button>
-					<span style={{ padding: "8px 12px", fontSize: 14, color: "var(--color-muted)" }}>
-						หน้า {page} / {totalPages}
-					</span>
-					<button
-						className="btn btn-secondary"
-						disabled={page >= totalPages}
-						onClick={() => setPage(page + 1)}
-						style={{ padding: "8px 12px", minHeight: "auto" }}
-					>
-						ถัดไป
-					</button>
+						{[10, 20, 50, 100].map((n) => (
+							<option key={n} value={n}>{n} รายการ</option>
+						))}
+					</select>
+					<span style={{ fontSize: 13, color: "var(--color-muted)" }}>จาก {total} รายการ</span>
 				</div>
-			)}
+
+				{/* Page nav */}
+				{totalPages > 1 && (
+					<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+						<button
+							className="btn btn-secondary btn-sm"
+							disabled={page <= 1}
+							onClick={() => setPage(page - 1)}
+							style={{ padding: "6px 12px", minHeight: "auto" }}
+						>
+							ก่อนหน้า
+						</button>
+						<span style={{ padding: "6px 12px", fontSize: 13, color: "var(--color-muted)", whiteSpace: "nowrap" }}>
+							{page} / {totalPages}
+						</span>
+						<button
+							className="btn btn-secondary btn-sm"
+							disabled={page >= totalPages}
+							onClick={() => setPage(page + 1)}
+							style={{ padding: "6px 12px", minHeight: "auto" }}
+						>
+							ถัดไป
+						</button>
+					</div>
+				)}
+			</div>
 
 			{/* Detail Modal */}
 			{selectedReg && (

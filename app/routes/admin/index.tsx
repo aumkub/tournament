@@ -226,7 +226,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 		<div className="max-w-[1200px] mx-auto px-lg py-xl">
 			<div className="flex justify-between items-center mb-lg">
 				<div>
-					<h2 className="text-[20px] font-semibold m-0">
+					<h2 className="!text-[26px] font-semibold m-0">
 						{isSuperAdmin ? "Tournaments" : (sessionTournament?.name || "Dashboard")}
 					</h2>
 					<span className="text-xs text-muted">
@@ -256,7 +256,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 								<a
 									key={t.id}
 									href={`/admin/${t.slug}`}
-									className="card p-0 flex flex-col overflow-hidden no-underline transition-shadow"
+									className="card !p-0 flex flex-col overflow-hidden no-underline transition-shadow"
 								>
 									<div className="w-full overflow-hidden" style={{ aspectRatio: "16/7", background: "var(--color-surface-soft)" }}>
 										{coverUrl ? (
@@ -268,8 +268,8 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 										)}
 									</div>
 									<div className="p-md p-lg">
-										<h3 className="text-[18px] mb-1 text-ink">{t.name}</h3>
-										<p className="text-xs text-muted m-0">slug: {t.slug}</p>
+										<h3 className="!text-[18px] mb-1 text-ink">{t.name}</h3>
+										<p className="text-xs text-muted mt-1">slug: {t.slug}</p>
 									</div>
 								</a>
 							);
