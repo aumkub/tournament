@@ -614,10 +614,10 @@ export function DynamicMultiStepForm({
 					{activeSteps.map((s, i) => (
 						<div key={s.id} className="flex items-center">
 							{i > 0 && (
-								<div className={`h-0.5 w-6 sm:w-8 flex-shrink-0 ${i <= stepIndex ? "bg-success" : "bg-hairline"}`} />
+								<div className={`h-0.5 w-3 sm:w-6 flex-shrink-0 ${i <= stepIndex ? "bg-success" : "bg-hairline"}`} />
 							)}
 							<div
-								className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors flex-shrink-0 ${
+								className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-semibold transition-colors flex-shrink-0 ${
 									i < stepIndex
 										? "bg-success text-white"
 										: i === stepIndex
