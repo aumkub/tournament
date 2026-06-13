@@ -136,7 +136,7 @@ export function FileUploadField({
 									<button
 										type="button"
 										onClick={() => handleRemove(f.key)}
-										className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-ink/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+										className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-ink/70 text-white flex items-center justify-center"
 										title="ลบ"
 									>
 										<IconX size={10} color="white" />

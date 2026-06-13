@@ -230,7 +230,7 @@ export default function SuccessPage({ loaderData }: Route.ComponentProps) {
 			</div>
 
 			{/* Content */}
-			<div className="max-w-[480px] mx-auto px-xl py-lg">
+			<div className="max-w-[480px] mx-auto px-md sm:px-xl py-lg">
 
 				{/* Success header */}
 				<div className="text-center mb-xl">

@@ -601,41 +601,44 @@ export function DynamicMultiStepForm({
 	};
 
 	return (
-		<div className="max-w-[640px] mx-auto px-lg">
+		<div className="max-w-[640px] mx-auto px-md sm:px-lg">
 			{/* Header */}
 			<div className="text-center mb-xxl hidden">
 				<h1 className="!text-[28px] !mb-3">{tournamentName}</h1>
 				<span className="badge-coral">{typeLabel}</span>
 			</div>
 
-			{/* Step progress */}
-			<div className="flex items-center justify-center mb-xl">
-				{activeSteps.map((s, i) => (
-					<div key={s.id} className="flex items-center">
-						{/* Connector line before circle (except first) */}
-						{i > 0 && (
-							<div className={`h-0.5 w-8 ${i <= stepIndex ? "bg-success" : "bg-hairline"}`} />
-						)}
-						<div
-							className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
-								i < stepIndex
-									? "bg-success text-white"
-									: i === stepIndex
-									? "bg-primary text-white"
-									: "bg-hairline text-muted"
-							}`}
-						>
-							{i < stepIndex ? <IconCheck size={14} color="white" /> : i + 1}
+			{/* Step progress — scrollable so many steps don't overflow on small phones */}
+			<div className="overflow-x-auto mb-xl">
+				<div className="flex items-center justify-center min-w-fit mx-auto px-2">
+					{activeSteps.map((s, i) => (
+						<div key={s.id} className="flex items-center">
+							{i > 0 && (
+								<div className={`h-0.5 w-6 sm:w-8 flex-shrink-0 ${i <= stepIndex ? "bg-success" : "bg-hairline"}`} />
+							)}
+							<div
+								className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors flex-shrink-0 ${
+									i < stepIndex
+										? "bg-success text-white"
+										: i === stepIndex
+										? "bg-primary text-white"
+										: "bg-hairline text-muted"
+								}`}
+							>
+								{i < stepIndex ? <IconCheck size={14} color="white" /> : i + 1}
+							</div>
 						</div>
-					</div>
-				))}
+					))}
+				</div>
 			</div>
 
 			{/* Step card */}
-			<div className="card p-xl">
-				<h2 className="!text-xl mb-xl">
-					{lang === "th" ? `ขั้นตอนที่ ${stepIndex + 1} จาก ${totalSteps}` : `Step ${stepIndex + 1} of ${totalSteps}`}
-					{" — "}
+			<div className="card">
+				<h2 className="!text-base sm:!text-xl mb-lg sm:mb-xl font-semibold leading-snug">
+					<span className="text-muted font-normal">
+						{lang === "th" ? `ขั้นตอนที่ ${stepIndex + 1}/${totalSteps}` : `Step ${stepIndex + 1}/${totalSteps}`}
+						{" — "}
+					</span>
 					{t(currentStep.title, lang)}
 				</h2>
 
