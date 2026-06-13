@@ -22,6 +22,7 @@ function t(val: { th: string; en: string }, lang: Lang): string {
 function Field({
 	field,
 	value,
+	otherValue,
 	onChange,
 	lang,
 	slug,
@@ -30,6 +31,7 @@ function Field({
 }: {
 	field: FieldConfig;
 	value: unknown;
+	otherValue?: unknown;
 	onChange: (key: string, val: unknown) => void;
 	lang: Lang;
 	slug: string;
@@ -42,6 +44,7 @@ function Field({
 
 	if (field.type === "multiselect") {
 		const selected = Array.isArray(value) ? (value as string[]) : [];
+		const showOtherInput = selected.includes("other");
 		return (
 			<div className="mb-lg">
 				<label className="label">
@@ -70,6 +73,7 @@ function Field({
 											? selected.filter((v) => v !== opt.value)
 											: [...selected, opt.value];
 										onChange(field.key, next);
+										if (opt.value === "other" && checked) onChange(`${field.key}_other`, "");
 									}}
 									className="checkbox"
 								/>
@@ -78,11 +82,21 @@ function Field({
 						);
 					})}
 				</div>
+				{showOtherInput && (
+					<input
+						className="input mt-2"
+						type="text"
+						placeholder={lang === "th" ? "โปรดระบุ..." : "Please specify..."}
+						value={(otherValue as string) || ""}
+						onChange={(e) => onChange(`${field.key}_other`, e.target.value)}
+					/>
+				)}
 			</div>
 		);
 	}
 
 	if (field.type === "radio") {
+		const showOtherInput = value === "other";
 		return (
 			<div className="mb-lg">
 				<label className="label">
@@ -116,11 +130,21 @@ function Field({
 						);
 					})}
 				</div>
+				{showOtherInput && (
+					<input
+						className="input mt-2"
+						type="text"
+						placeholder={lang === "th" ? "โปรดระบุ..." : "Please specify..."}
+						value={(otherValue as string) || ""}
+						onChange={(e) => onChange(`${field.key}_other`, e.target.value)}
+					/>
+				)}
 			</div>
 		);
 	}
 
 	if (field.type === "select") {
+		const showOtherInput = (value as string) === "other";
 		return (
 			<div className="mb-lg">
 				<label className="label">
@@ -140,6 +164,15 @@ function Field({
 						</option>
 					))}
 				</Select>
+				{showOtherInput && (
+					<input
+						className="input mt-2"
+						type="text"
+						placeholder={lang === "th" ? "โปรดระบุ..." : "Please specify..."}
+						value={(otherValue as string) || ""}
+						onChange={(e) => onChange(`${field.key}_other`, e.target.value)}
+					/>
+				)}
 			</div>
 		);
 	}
@@ -254,7 +287,7 @@ function renderUploadKey(key: string, onImageClick?: (url: string) => void, size
 	);
 }
 
-function fieldDisplay(val: unknown, field: FieldConfig, lang: Lang, onImageClick?: (url: string) => void): React.ReactNode {
+function fieldDisplay(val: unknown, field: FieldConfig, lang: Lang, onImageClick?: (url: string) => void, otherText?: string): React.ReactNode {
 	if (val === undefined || val === null || val === "") return null;
 	if (Array.isArray(val)) {
 		if (val.length === 0) return null;
@@ -268,9 +301,16 @@ function fieldDisplay(val: unknown, field: FieldConfig, lang: Lang, onImageClick
 				</div>
 			);
 		}
-		return (val as string[]).map((v) => field.options?.find((o) => o.value === v)?.label[lang] ?? v).join(", ");
+		return (val as string[]).map((v) => {
+			if (v === "other" && otherText) return `${lang === "th" ? "อื่นๆ" : "Other"}: ${otherText}`;
+			return field.options?.find((o) => o.value === v)?.label[lang] ?? v;
+		}).join(", ");
 	}
-	if (field.options) return field.options.find((o) => o.value === val)?.label[lang] ?? String(val);
+	if (field.options) {
+		const optLabel = field.options.find((o) => o.value === val)?.label[lang] ?? String(val);
+		if (val === "other" && otherText) return `${optLabel}: ${otherText}`;
+		return optLabel;
+	}
 	if (typeof val === "boolean") return val ? (lang === "th" ? "ใช่" : "Yes") : (lang === "th" ? "ไม่" : "No");
 	if (isUploadKey(val)) return renderUploadKey(val, onImageClick);
 	if (typeof val === "string" && /^https?:\/\//.test(val)) {
@@ -311,7 +351,7 @@ function SummaryCard({ data, config, lang }: { data: Record<string, unknown>; co
 	const activeGroup = groups[safeIdx];
 
 	const visibleRows = activeGroup?.fields
-		.map((field) => ({ field, display: fieldDisplay(data[field.key], field, lang, setLightbox) }))
+		.map((field) => ({ field, display: fieldDisplay(data[field.key], field, lang, setLightbox, data[`${field.key}_other`] as string | undefined) }))
 		.filter((r) => r.display !== null) ?? [];
 
 	return (
@@ -448,10 +488,17 @@ function generateTestValue(field: FieldConfig): unknown {
 	return "ทดสอบ " + randInt(100, 999);
 }
 
+function matchCondition(cond: import("../../types/form-config").StepCondition, data: Record<string, unknown>): boolean {
+	const val = data[cond.field];
+	if (cond.operator === "includes") return Array.isArray(val) && (val as string[]).includes(cond.value);
+	return val === cond.value;
+}
+
 function resolveActiveSteps(steps: StepConfig[], data: Record<string, unknown>): StepConfig[] {
 	return steps.filter((s) => {
+		if (s.conditions) return s.conditions.every((c) => matchCondition(c, data));
 		if (!s.condition) return true;
-		return data[s.condition.field] === s.condition.value;
+		return matchCondition(s.condition, data);
 	});
 }
 
@@ -601,6 +648,7 @@ export function DynamicMultiStepForm({
 						key={field.key}
 						field={field}
 						value={data[field.key]}
+						otherValue={data[`${field.key}_other`]}
 						onChange={update}
 						lang={lang}
 						slug={slug}

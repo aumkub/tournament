@@ -52,7 +52,8 @@ export const attendeeDynamicConfig: FormConfig = {
 					key: "email",
 					type: "email",
 					label: { th: "อีเมล", en: "Email" },
-					required: true,
+					required: false,
+					note: { th: "สำหรับรับอีเมลยืนยัน (ไม่บังคับ)", en: "For confirmation email (optional)" },
 				},
 				{
 					key: "occupation",

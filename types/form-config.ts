@@ -36,6 +36,7 @@ export type FieldConfig = {
 export type StepCondition = {
 	field: string;
 	value: string;
+	operator?: "eq" | "includes"; // default "eq"
 };
 
 export type StepConfig = {
@@ -44,6 +45,7 @@ export type StepConfig = {
 	fields: FieldConfig[];
 	showSummary?: boolean;
 	condition?: StepCondition;
+	conditions?: StepCondition[]; // AND logic — all must match
 };
 
 export type DataGroup = {

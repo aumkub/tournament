@@ -27,6 +27,7 @@ export const youthConfig: FormConfig = {
 		{
 			id: "path_select",
 			title: { th: "เลือกประเภทการเข้าร่วม", en: "Select Participation Type" },
+			condition: { field: "attendance_days", value: "saturday", operator: "includes" },
 			fields: [
 				{
 					key: "youth_path",
@@ -128,22 +129,24 @@ export const youthConfig: FormConfig = {
 		{
 			id: "video_results",
 			title: { th: "วิดีโอ & ผลงาน", en: "Videos & Results" },
-			// Only shown when youth_path === "beat_pro"
-			condition: { field: "youth_path", value: "beat_pro" },
+			conditions: [
+				{ field: "attendance_days", value: "saturday", operator: "includes" },
+				{ field: "youth_path", value: "beat_pro" },
+			],
 			fields: [
 				{
 					key: "swing_video_url",
 					type: "url",
-					label: { th: "วิดีโอสวิง (Google Drive link)", en: "Swing Video (Google Drive link)" },
+					label: { th: "วิดีโอสวิง", en: "Swing Video" },
 					required: true,
-					note: { th: "MP4 หรือ MOV ไม่เกิน 2 นาที ตั้งค่า 'ทุกคนที่มีลิงก์สามารถดูได้'", en: "MP4 or MOV, max 2 min. Set sharing to 'Anyone with the link can view'." },
+					note: { th: "ลิงก์วิดีโอ เช่น YouTube, TikTok, Instagram, Google Drive, ฯลฯ", en: "Video link — YouTube, TikTok, Instagram, Google Drive, etc." },
 				},
 				{
 					key: "intro_video_url",
 					type: "url",
-					label: { th: "วิดีโอแนะนำตัว (Google Drive link)", en: "Introduction Video (Google Drive link)" },
+					label: { th: "วิดีโอแนะนำตัว", en: "Introduction Video" },
 					required: true,
-					note: { th: "MP4 หรือ MOV ไม่เกิน 2 นาที ตั้งค่า 'ทุกคนที่มีลิงก์สามารถดูได้'", en: "MP4 or MOV, max 2 min. Set sharing to 'Anyone with the link can view'." },
+					note: { th: "ลิงก์วิดีโอ เช่น YouTube, TikTok, Instagram, Google Drive, ฯลฯ", en: "Video link — YouTube, TikTok, Instagram, Google Drive, etc." },
 				},
 				{
 					key: "scorecards",
@@ -194,8 +197,8 @@ export const youthConfig: FormConfig = {
 					key: "parent_email",
 					type: "email",
 					label: { th: "อีเมล (Gmail)", en: "Email (Gmail)" },
-					required: true,
-					note: { th: "ใช้รับอีเมลยืนยัน", en: "Used to receive confirmation email" },
+					required: false,
+					note: { th: "สำหรับรับอีเมลยืนยัน (ไม่บังคับ)", en: "For confirmation email (optional)" },
 				},
 				{
 					key: "heard_from",

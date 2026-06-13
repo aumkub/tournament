@@ -451,6 +451,29 @@ export function IconChevronRight(p: IconProps) {
 	return svg(<polyline points="9 18 15 12 9 6" />, { ...defaults, ...p });
 }
 
+export function IconDashboard(p: IconProps) {
+	return svg(
+		<>
+			<rect x="3" y="3" width="7" height="9" rx="1" />
+			<rect x="14" y="3" width="7" height="5" rx="1" />
+			<rect x="14" y="12" width="7" height="9" rx="1" />
+			<rect x="3" y="16" width="7" height="5" rx="1" />
+		</>,
+		{ ...defaults, ...p },
+	);
+}
+
+export function IconCheckIn(p: IconProps) {
+	return svg(
+		<>
+			<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+			<circle cx="9" cy="7" r="4" />
+			<polyline points="16 11 18 13 22 9" />
+		</>,
+		{ ...defaults, ...p },
+	);
+}
+
 export function ImageIcon(p: IconProps) {
 	return svg(
 		<>

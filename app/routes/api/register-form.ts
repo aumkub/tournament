@@ -42,18 +42,19 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		return Response.json({ error: `Unknown form type: ${body.form_id}` }, { status: 400 });
 	}
 
-	const email = body.email || (body.data[formConfig.emailField] as string);
-	if (!email) {
-		return Response.json({ error: "Email is required" }, { status: 400 });
-	}
+	const email = (body.email || (body.data[formConfig.emailField] as string) || "").trim().toLowerCase();
+
+	const matchCond = (cond: { field: string; value: string; operator?: string }, data: Record<string, unknown>) => {
+		const val = data[cond.field];
+		if (cond.operator === "includes") return Array.isArray(val) && (val as string[]).includes(cond.value);
+		return val === cond.value;
+	};
 
 	// Validate required fields — skip conditional steps that don't apply
 	const missing: string[] = [];
 	for (const step of formConfig.steps) {
-		if (step.condition) {
-			const condVal = body.data[step.condition.field];
-			if (condVal !== step.condition.value) continue;
-		}
+		if (step.conditions && !step.conditions.every((c) => matchCond(c, body.data))) continue;
+		if (!step.conditions && step.condition && !matchCond(step.condition, body.data)) continue;
 		for (const field of step.fields) {
 			if (!field.required) continue;
 			const val = body.data[field.key];
@@ -81,17 +82,19 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		}
 	}
 
-	// Check duplicate email within same tournament + type
-	const duplicate = await env.DB.prepare(
-		"SELECT id FROM registrations WHERE tournament_id = ? AND type = ? AND email = ?",
-	)
-		.bind(tournament.id as string, body.form_id, email.trim().toLowerCase())
-		.first();
-	if (duplicate) {
-		return Response.json(
-			{ error: "อีเมลนี้ได้ลงทะเบียนประเภทนี้ไปแล้ว", code: "duplicate_email" },
-			{ status: 409 },
-		);
+	// Check duplicate email within same tournament + type (only if email provided)
+	if (email) {
+		const duplicate = await env.DB.prepare(
+			"SELECT id FROM registrations WHERE tournament_id = ? AND type = ? AND email = ?",
+		)
+			.bind(tournament.id as string, body.form_id, email)
+			.first();
+		if (duplicate) {
+			return Response.json(
+				{ error: "อีเมลนี้ได้ลงทะเบียนประเภทนี้ไปแล้ว", code: "duplicate_email" },
+				{ status: 409 },
+			);
+		}
 	}
 
 	// Generate unique 6-char uppercase alphanumeric ID
@@ -126,13 +129,15 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		)
 		.run();
 
-	try {
-		await env.EMAIL_QUEUE.send({
-			registrationId: id,
-			tournamentId: tournament.id as string,
-		});
-	} catch {
-		// Queue not available in local dev — continue
+	if (email) {
+		try {
+			await env.EMAIL_QUEUE.send({
+				registrationId: id,
+				tournamentId: tournament.id as string,
+			});
+		} catch {
+			// Queue not available in local dev — continue
+		}
 	}
 
 	// Broadcast new registration to admin dashboards

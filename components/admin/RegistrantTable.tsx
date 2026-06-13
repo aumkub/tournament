@@ -74,6 +74,22 @@ function parseName(reg: Registrant): string {
 	}
 }
 
+function formatPhone(raw: string): string {
+	const digits = raw.replace(/\D/g, "");
+	if (digits.length >= 9) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+	return raw;
+}
+
+function parsePhone(reg: Registrant): string {
+	try {
+		const data = JSON.parse(reg.data_json);
+		const raw = data.phone || data.parent_phone || data.tel || data.mobile || data.telephone || "";
+		return raw ? formatPhone(raw) : "";
+	} catch {
+		return "";
+	}
+}
+
 export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps) {
 	const [registrants, setRegistrants] = useState<Registrant[]>([]);
 	const [total, setTotal] = useState(0);
@@ -293,7 +309,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 						<tr className="bg-surface-soft">
 							<th className="px-4 py-3 text-left text-sm font-medium text-muted">ชื่อ</th>
 							<th className="px-4 py-3 text-left text-sm font-medium text-muted">ประเภท</th>
-							<th className="px-4 py-3 text-left text-sm font-medium text-muted">อีเมล</th>
+							<th className="px-4 py-3 text-left text-sm font-medium text-muted">อีเมล / เบอร์โทร</th>
 							<th className="px-4 py-3 text-left text-sm font-medium text-muted">รหัส</th>
 							<th className="px-4 py-3 text-left text-sm font-medium text-muted">เช็คอิน</th>
 							<th className="px-4 py-3 text-right text-sm font-medium text-muted">Actions</th>
@@ -319,7 +335,11 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 											{getTypeLabel(reg.type, typeLabels)}
 										</span>
 									</td>
-									<td className="px-4 py-3 text-body">{reg.email}</td>
+									<td className="px-4 py-3">
+										{reg.email && <div className="text-body text-sm">{reg.email}</div>}
+										{parsePhone(reg) && <div className="text-muted text-sm">{parsePhone(reg)}</div>}
+										{!reg.email && !parsePhone(reg) && <span className="text-muted">—</span>}
+									</td>
 									<td className="px-4 py-3 text-sm font-mono text-muted tracking-wider">
 										<span className="inline-flex items-center gap-1">
 											{reg.id}
@@ -562,7 +582,7 @@ function UploadPreview({ fileKey, onImageClick }: { fileKey: string; onImageClic
 	);
 }
 
-function FieldRow({ fieldKey, value, formConfig, onImageClick }: { fieldKey: string; value: unknown; formConfig: (typeof FORM_CONFIGS)[string] | undefined; onImageClick: (url: string) => void }) {
+function FieldRow({ fieldKey, value, formConfig, onImageClick, data }: { fieldKey: string; value: unknown; formConfig: (typeof FORM_CONFIGS)[string] | undefined; onImageClick: (url: string) => void; data?: Record<string, unknown> }) {
 	if (value === undefined || value === null) return null;
 
 	const labelMap: Record<string, string> = {};
@@ -573,7 +593,15 @@ function FieldRow({ fieldKey, value, formConfig, onImageClick }: { fieldKey: str
 			}
 		}
 	}
-	const label = labelMap[fieldKey] || fieldKey;
+	// For _other keys, derive label from parent field
+	let label: string;
+	if (fieldKey.endsWith("_other")) {
+		const parentKey = fieldKey.slice(0, -6);
+		const parentLabel = labelMap[parentKey];
+		label = parentLabel ? `${parentLabel} (ระบุ)` : fieldKey;
+	} else {
+		label = labelMap[fieldKey] || fieldKey;
+	}
 
 	if (typeof value === "boolean") {
 		return (
@@ -596,8 +624,12 @@ function FieldRow({ fieldKey, value, formConfig, onImageClick }: { fieldKey: str
 				</div>
 			);
 		}
+		const otherText = data?.[`${fieldKey}_other`] as string | undefined;
 		const display = opts
-			? (value as string[]).map((v) => opts.find((o) => o.value === v)?.label.th ?? v).join(", ")
+			? (value as string[]).map((v) => {
+				if (v === "other" && otherText) return `${opts.find((o) => o.value === v)?.label.th ?? "อื่นๆ"}: ${otherText}`;
+				return opts.find((o) => o.value === v)?.label.th ?? v;
+			}).join(", ")
 			: `${value.length} รายการ`;
 		return (
 			<div className="flex justify-between py-1.5 border-b border-black/5 gap-sm">
@@ -616,8 +648,13 @@ function FieldRow({ fieldKey, value, formConfig, onImageClick }: { fieldKey: str
 	}
 	const fieldCfg = formConfig?.steps.flatMap((s) => s.fields).find((f) => f.key === fieldKey);
 	const optLabel = fieldCfg?.options?.find((o) => o.value === value)?.label.th;
+	const otherText = data?.[`${fieldKey}_other`] as string | undefined;
 	const isUrl = !optLabel && typeof value === "string" && /^https?:\/\//.test(value);
-	const displayVal = optLabel || String(value);
+	const isTel = fieldCfg?.type === "tel" || fieldKey.includes("phone") || fieldKey.includes("tel") || fieldKey.includes("mobile");
+	const rawVal = (value === "other" && otherText)
+		? `${optLabel ?? "อื่นๆ"}: ${otherText}`
+		: optLabel || String(value);
+	const displayVal = isTel && !optLabel ? formatPhone(rawVal) : rawVal;
 	return (
 		<div className="flex justify-between py-1.5 border-b border-black/5 gap-sm">
 			<span className="text-sm text-muted flex-shrink-0">{label}</span>
@@ -660,23 +697,27 @@ function DetailData({ data_json, type }: { data_json: string; type: string }) {
 		const data = JSON.parse(data_json);
 		const formConfig = FORM_CONFIGS[type];
 
+		// Keys already shown in popup header — skip to avoid redundancy
+		const NAME_KEYS = new Set(["child_full_name_th", "full_name", "full_name_th", "full_name_en"]);
+		const skipKey = (k: string) => NAME_KEYS.has(k) || k.endsWith("_other");
+
 		// Build tab groups — prefer explicit groups, fall back to steps
 		let tabs: TabGroup[] = [];
 
 		if (formConfig?.groups && formConfig.groups.length > 0) {
-			tabs = formConfig.groups.map((g) => ({ id: g.id, label: g.label.th, keys: g.keys }));
+			tabs = formConfig.groups.map((g) => ({ id: g.id, label: g.label.th, keys: g.keys.filter((k) => !skipKey(k)) }));
 		} else if (formConfig?.steps && formConfig.steps.length > 1) {
 			// Auto-group by steps (skip summary steps)
 			tabs = formConfig.steps
 				.filter((s) => !s.showSummary)
-				.map((s) => ({ id: s.id, label: s.title.th, keys: s.fields.map((f) => f.key) }));
+				.map((s) => ({ id: s.id, label: s.title.th, keys: s.fields.map((f) => f.key).filter((k) => !skipKey(k)) }));
 		}
 
 		// Append "อื่นๆ" tab for keys not covered
 		if (tabs.length > 0) {
 			const coveredKeys = new Set(tabs.flatMap((t) => t.keys));
 			const extraKeys = Object.keys(data).filter(
-				(k) => !coveredKeys.has(k) && data[k] !== undefined && data[k] !== null && data[k] !== "",
+				(k) => !coveredKeys.has(k) && !skipKey(k) && data[k] !== undefined && data[k] !== null && data[k] !== "",
 			);
 			if (extraKeys.length > 0) tabs = [...tabs, { id: "__extra__", label: "อื่นๆ", keys: extraKeys }];
 		}
@@ -700,7 +741,7 @@ function DetailData({ data_json, type }: { data_json: string; type: string }) {
 					<TabBar tabs={tabs} active={resolvedId} onChange={setActiveGroup} />
 					<div className="flex flex-col pt-sm">
 						{resolvedTab.keys.map((key) => (
-							<FieldRow key={key} fieldKey={key} value={data[key]} formConfig={formConfig} onImageClick={setLightbox} />
+							<FieldRow key={key} fieldKey={key} value={data[key]} formConfig={formConfig} onImageClick={setLightbox} data={data} />
 						))}
 					</div>
 				</div>
@@ -716,16 +757,16 @@ function DetailData({ data_json, type }: { data_json: string; type: string }) {
 				}
 			}
 		}
-		const configKeys = Object.keys(labelMap);
+		const configKeys = Object.keys(labelMap).filter((k) => !skipKey(k));
 		const allKeys = configKeys.length > 0
-			? [...configKeys, ...Object.keys(data).filter((k) => !labelMap[k])]
-			: Object.keys(data);
+			? [...configKeys, ...Object.keys(data).filter((k) => !labelMap[k] && !skipKey(k))]
+			: Object.keys(data).filter((k) => !skipKey(k));
 
 		return (
 			<div className="flex flex-col">
 				{lightboxOverlay}
 				{allKeys.map((key) => (
-					<FieldRow key={key} fieldKey={key} value={data[key]} formConfig={formConfig} onImageClick={setLightbox} />
+					<FieldRow key={key} fieldKey={key} value={data[key]} formConfig={formConfig} onImageClick={setLightbox} data={data} />
 				))}
 			</div>
 		);

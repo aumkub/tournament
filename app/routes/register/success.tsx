@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { Route } from "./+types/register/success";
 import { generateQRCodeDataURL } from "../../../lib/qrcode";
 import { IconCamera, IconCheckCircle, IconMail } from "../../../components/ui/icons";
@@ -53,6 +54,32 @@ export function meta({ data }: Route.MetaArgs) {
 	return [{ title: "ลงทะเบียนสำเร็จ" }];
 }
 
+function FlagTH({ size = 24 }: { size?: number }) {
+	return (
+		<svg width={size} height={size * 2 / 3} viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+			<rect width="900" height="600" fill="#A51931"/>
+			<rect y="100" width="900" height="400" fill="#F4F5F8"/>
+			<rect y="200" width="900" height="200" fill="#2D2A4A"/>
+		</svg>
+	);
+}
+
+function FlagGB({ size = 24 }: { size?: number }) {
+	const w = size;
+	const h = size * 2 / 3;
+	return (
+		<svg width={w} height={h} viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+			<rect width="60" height="40" fill="#012169"/>
+			<path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" strokeWidth="8"/>
+			<path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="4"/>
+			<rect x="25" width="10" height="40" fill="#fff"/>
+			<rect y="15" width="60" height="10" fill="#fff"/>
+			<rect x="27" width="6" height="40" fill="#C8102E"/>
+			<rect y="17" width="60" height="6" fill="#C8102E"/>
+		</svg>
+	);
+}
+
 // Confetti particle — pure CSS, no lib needed
 function Confetti() {
 	const pieces = Array.from({ length: 48 }, (_, i) => i);
@@ -104,7 +131,88 @@ function Confetti() {
 	);
 }
 
+function QRSaveShare({ qrDataUrl, tournamentName, lang }: { qrDataUrl: string; tournamentName: string; lang: "th" | "en" }) {
+	const [canShare, setCanShare] = useState(false);
+
+	useEffect(() => {
+		setCanShare(typeof navigator !== "undefined" && !!navigator.share);
+	}, []);
+
+	const handleSave = () => {
+		const a = document.createElement("a");
+		a.href = qrDataUrl;
+		a.download = `qr-checkin-${tournamentName.replace(/\s+/g, "-")}.png`;
+		a.click();
+	};
+
+	const handleShare = async () => {
+		try {
+			const res = await fetch(qrDataUrl);
+			const blob = await res.blob();
+			const file = new File([blob], "qr-checkin.png", { type: "image/png" });
+			await navigator.share({
+				files: [file],
+				title: lang === "th" ? `QR Check-in — ${tournamentName}` : `QR Check-in — ${tournamentName}`,
+				text: lang === "th"
+					? "กรุณาแสดง QR Code นี้ที่จุดเช็คอิน"
+					: "Please show this QR Code at the check-in counter",
+			});
+		} catch {
+			// user cancelled or share failed — fall back to save
+			handleSave();
+		}
+	};
+
+	return (
+		<div className="flex gap-3">
+			<button
+				type="button"
+				onClick={handleSave}
+				className="btn btn-secondary flex-1"
+				style={{ gap: 8 }}
+			>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+					<polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+				</svg>
+				{lang === "th" ? "บันทึกรูป" : "Save Image"}
+			</button>
+			{canShare && (
+				<button
+					type="button"
+					onClick={handleShare}
+					className="btn btn-secondary flex-1"
+					style={{ gap: 8 }}
+				>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+						<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+						<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+					</svg>
+					{lang === "th" ? "แชร์" : "Share"}
+				</button>
+			)}
+		</div>
+	);
+}
+
+const LANG_KEY = "register_lang";
+
 export default function SuccessPage({ loaderData }: Route.ComponentProps) {
+	const [lang, setLang] = useState<"th" | "en">("th");
+
+	useEffect(() => {
+		const saved = localStorage.getItem(LANG_KEY);
+		if (saved === "th" || saved === "en") setLang(saved);
+	}, []);
+
+	const toggleLang = () => {
+		const next = lang === "th" ? "en" : "th";
+		setLang(next);
+		localStorage.setItem(LANG_KEY, next);
+	};
+
+	const hasEmail = !!loaderData.email;
+
 	return (
 		<div className="min-h-screen bg-canvas">
 			<Confetti />
@@ -132,52 +240,75 @@ export default function SuccessPage({ loaderData }: Route.ComponentProps) {
 							<polyline points="11,21 17,27 29,14" stroke="#5db872" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
 						</svg>
 					</div>
-					<h2 className="!text-[28px] font-bold m-0 !mb-1">ลงทะเบียนสำเร็จ!</h2>
+					<h2 className="!text-[28px] font-bold m-0 !mb-1">
+						{lang === "th" ? "ลงทะเบียนสำเร็จ!" : "Registration Complete!"}
+					</h2>
 					<p className="text-sm text-muted m-0">{loaderData.tournamentName}</p>
 				</div>
 
 				{/* Card */}
 				<div className="card !p-0 overflow-hidden mb-lg">
-					{/* Name + type */}
-					{/* <div className="px-lg pt-lg pb-md border-b border-hairline-soft">
-						<span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1">{loaderData.typeLabel}</span>
-						<p className="text-[20px] font-semibold text-ink m-0">
-							{loaderData.name || "—"}
-						</p>
-					</div> */}
-
 					{/* QR Code */}
 					<div className="p-xl flex flex-col items-center gap-md bg-surface-soft">
 						<div className="bg-white rounded-xl p-4 shadow-sm inline-block">
 							<img src={loaderData.qrDataUrl} alt="QR Code" className="w-[200px] h-[200px] block" />
 						</div>
-						<p className="text-sm text-muted m-0 text-center">แสดง QR Code นี้ที่จุดเช็คอิน</p>
+						<p className="text-sm font-medium text-body m-0 text-center">
+							{lang === "th"
+								? "กรุณาแสดง QR Code นี้ที่จุดเช็คอิน"
+								: "Please present this QR Code at the check-in counter"}
+						</p>
 					</div>
 
 					{/* Registration ID */}
 					<div className="flex items-center px-lg py-md border-t border-hairline-soft flex items-center gap-2 text">
 						<IconCheckCircle size={14} color="var(--color-success)" />
-						<span className="text-sm text-muted">รหัสการลงทะเบียน:</span>
+						<span className="text-sm text-muted">{lang === "th" ? "รหัสการลงทะเบียน:" : "Registration ID:"}</span>
 						<span className="text-sm font-mono font-semibold text-body select-all tracking-widest">{loaderData.id}</span>
 					</div>
 				</div>
 
 				{/* Email sent notice */}
-				<div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-hairline bg-surface-soft">
-					<div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-						<IconMail size={16} color="var(--color-primary)" />
-					</div>
-					<div className="min-w-0">
-						<p className="text-base font-medium text-body m-0">ส่งอีเมลยืนยันแล้ว</p>
-						{loaderData.email && (
+				{hasEmail ? (
+					<div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-hairline bg-surface-soft mb-md">
+						<div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+							<IconMail size={16} color="var(--color-primary)" />
+						</div>
+						<div className="min-w-0">
+							<p className="text-base font-medium text-body m-0">
+								{lang === "th" ? "ส่งอีเมลยืนยันแล้ว" : "Confirmation email sent"}
+							</p>
 							<p className="text-base text-muted m-0 truncate">{loaderData.email}</p>
-						)}
+						</div>
+						<svg className="flex-shrink-0 ml-auto" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+							<polyline points="20 6 9 17 4 12" />
+						</svg>
 					</div>
-					<svg className="flex-shrink-0 ml-auto" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-						<polyline points="20 6 9 17 4 12" />
-					</svg>
-				</div>
+				) : (
+					<div className="flex items-start gap-3 px-4 py-3 rounded-xl border border-warning/40 bg-warning/5 mb-md">
+						<svg className="flex-shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+							<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+						</svg>
+						<p className="text-sm text-body m-0">
+							{lang === "th"
+								? "ไม่มีการส่งอีเมลยืนยัน กรุณาบันทึกหรือแชร์ QR Code นี้ไว้เพื่อใช้เช็คอินในวันงาน"
+								: "No confirmation email will be sent. Save or share this QR Code — you'll need it to check in on the event day."}
+						</p>
+					</div>
+				)}
+
+				{/* Save/Share QR — always visible */}
+				<QRSaveShare qrDataUrl={loaderData.qrDataUrl} tournamentName={loaderData.tournamentName} lang={lang} />
 			</div>
+
+			{/* Floating language toggle */}
+			<button
+				onClick={toggleLang}
+				className="fixed bottom-6 left-6 z-[999] flex items-center gap-2 px-3 py-2 rounded-full border border-hairline bg-canvas text-sm font-medium text-body shadow-sm hover:bg-surface-soft transition-colors"
+			>
+				{lang === "th" ? <FlagGB size={20} /> : <FlagTH size={20} />}
+				{lang === "th" ? "English" : "ภาษาไทย"}
+			</button>
 		</div>
 	);
 }

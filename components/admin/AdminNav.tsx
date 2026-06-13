@@ -1,4 +1,4 @@
-import { IconQrCode, IconSettings, IconLogOut, IconChevronRight } from "../ui/icons";
+import { IconCheckIn, IconSettings, IconChevronRight, IconDashboard } from "../ui/icons";
 import type { Role } from "../../types/registration";
 
 type Props = {
@@ -75,20 +75,22 @@ export function AdminNav({ slug, name, role, current }: Props) {
 				<div className="flex items-center gap-1 flex-shrink-0">
 					{isAdmin && (
 						<a href={`/portal/${slug}`} className={current === "dashboard" ? navLinkActive : navLinkInactive}>
-							<span className="hidden md:inline md:!text-sm">แดชบอร์ด</span>
-							<span className="md:hidden text-xs">DB</span>
+							<IconDashboard size={15} />
+							<span className="hidden md:inline md:!text-[13px]">แดชบอร์ด</span>
+							<span className="md:hidden text-[13px]">DB</span>
 						</a>
+	
 					)}
 
 					<a href={`/portal/${slug}/checkin`} className={current === "checkin" ? navLinkActive : navLinkInactive}>
-						<IconQrCode size={15} />
-						<span className="hidden md:inline md:!text-sm">เช็คอิน</span>
+						<IconCheckIn size={15} />
+						<span className="hidden md:inline md:!text-[13px]">เช็คอิน</span>
 					</a>
 
 					{isSuperAdmin && (
 						<a href={`/portal/${slug}/settings`} className={current === "settings" ? navLinkActive : navLinkInactive}>
 							<IconSettings size={15} />
-							<span className="hidden md:inline md:!text-sm">ตั้งค่า</span>
+							<span className="hidden md:inline md:!text-[13px]">ตั้งค่า</span>
 						</a>
 					)}
 				</div>
