@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 interface StatsPanelProps {
 	slug: string;
+	typeLabels?: Record<string, string>;
 }
 
 interface Limits {
@@ -20,7 +21,7 @@ interface Stats {
 	limits: Limits;
 }
 
-export function StatsPanel({ slug }: StatsPanelProps) {
+export function StatsPanel({ slug, typeLabels = {} }: StatsPanelProps) {
 	const [stats, setStats] = useState<Stats | null>(null);
 	const [loading, setLoading] = useState(true);
 	const fetchStatsRef = useRef<() => void>(() => {});
@@ -147,7 +148,7 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 	return (
 		<div className="grid gap-lg" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
 			<div className="card">
-				<p className="text-sm text-muted mb-1">ผู้เข้าแข่งขัน</p>
+				<p className="text-sm text-muted mb-1">{typeLabels["competitor"] || "ผู้เข้าแข่งขัน"}</p>
 				<p className="text-[32px] font-bold text-ink m-0 leading-none">
 					{stats.competitors}
 					{stats.limits.competitor && <span className="text-base text-muted font-normal"> / {stats.limits.competitor}</span>}
@@ -157,7 +158,7 @@ export function StatsPanel({ slug }: StatsPanelProps) {
 			</div>
 
 			<div className="card">
-				<p className="text-sm text-muted mb-1">ผู้เข้าร่วมงาน</p>
+				<p className="text-sm text-muted mb-1">{typeLabels["attendee"] || "ผู้เข้าร่วมงาน"}</p>
 				<p className="text-[32px] font-bold text-ink m-0 leading-none">
 					{stats.attendees}
 					{stats.limits.attendee && <span className="text-base text-muted font-normal"> / {stats.limits.attendee}</span>}

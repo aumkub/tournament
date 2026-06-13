@@ -28,7 +28,7 @@ export function AdminNav({ slug, name, role, current }: Props) {
 	const isDashboard = current === "dashboard";
 
 	return (
-		<nav className="sticky top-0 z-50 bg-canvas border-b border-hairline">
+		<nav className="sticky top-14 z-40 bg-canvas border-b border-hairline">
 			<div className="max-w-[1200px] mx-auto px-lg h-14 flex items-center gap-2">
 
 				{/* Breadcrumbs */}
@@ -75,20 +75,20 @@ export function AdminNav({ slug, name, role, current }: Props) {
 				<div className="flex items-center gap-1 flex-shrink-0">
 					{isAdmin && (
 						<a href={`/portal/${slug}`} className={current === "dashboard" ? navLinkActive : navLinkInactive}>
-							<span className="hidden md:inline md:!text-sm">Dashboard</span>
+							<span className="hidden md:inline md:!text-sm">แดชบอร์ด</span>
 							<span className="md:hidden text-xs">DB</span>
 						</a>
 					)}
 
 					<a href={`/portal/${slug}/checkin`} className={current === "checkin" ? navLinkActive : navLinkInactive}>
 						<IconQrCode size={15} />
-						<span className="hidden md:inline md:!text-sm">Check-in</span>
+						<span className="hidden md:inline md:!text-sm">เช็คอิน</span>
 					</a>
 
 					{isSuperAdmin && (
 						<a href={`/portal/${slug}/settings`} className={current === "settings" ? navLinkActive : navLinkInactive}>
 							<IconSettings size={15} />
-							<span className="hidden md:inline md:!text-sm">Settings</span>
+							<span className="hidden md:inline md:!text-sm">ตั้งค่า</span>
 						</a>
 					)}
 				</div>

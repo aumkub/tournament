@@ -114,7 +114,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 
 				{/* Stats */}
 				<div className="mb-xl">
-					<StatsPanel slug={loaderData.slug} />
+					<StatsPanel slug={loaderData.slug} typeLabels={loaderData.typeLabels} />
 				</div>
 
 				{/* Two-column layout */}

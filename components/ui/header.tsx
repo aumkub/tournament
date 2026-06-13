@@ -39,11 +39,8 @@ export function Header() {
 					<a href="/" className={navLinkClass}>หน้าหลัก</a>
 
 					{authenticated && isAdminPlus && (
-						<a
-							href={backendUrl}
-							className="inline-flex items-center gap-1.5 text-sm font-medium text-white px-3 py-1.5 rounded-md bg-primary transition-opacity hover:opacity-85 no-underline"
-						>
-							<IconSettings size={14} /> Backend
+						<a href={backendUrl} className={navLinkClass}>
+							ผู้ดูแลระบบ
 						</a>
 					)}
 					{authenticated && (
@@ -80,9 +77,9 @@ export function Header() {
 						<a
 							href={backendUrl}
 							onClick={() => setMenuOpen(false)}
-							className="text-sm font-medium text-white py-2.5 px-3 rounded-md flex items-center gap-2 bg-primary no-underline"
+							className="text-sm font-medium text-body py-2.5 px-3 rounded-md flex items-center gap-2 no-underline hover:bg-surface-soft"
 						>
-							<IconSettings size={15} /> Backend
+							ผู้ดูแลระบบ
 						</a>
 					)}
 					{authenticated && (

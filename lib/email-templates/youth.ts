@@ -16,10 +16,10 @@ export const YOUTH_EMAIL_TEMPLATE = `
           <tr>
             <td style="padding:40px;">
               <p style="margin:0 0 8px;font-size:16px;color:#141413;font-weight:600;">
-                เรียน ผู้ปกครองของ {{registrant_name}},
+                เรียน {{parent_full_name}},
               </p>
               <p style="margin:0 0 28px;font-size:15px;color:#3d3d3a;line-height:1.6;">
-                การลงทะเบียน{{registration_type}}เสร็จสมบูรณ์แล้ว
+                การลงทะเบียน{{registration_type}}ของ <strong>{{child_name}}</strong> เสร็จสมบูรณ์แล้ว
                 กรุณาแสดง QR Code นี้ในวันงาน
               </p>
 
@@ -34,25 +34,56 @@ export const YOUTH_EMAIL_TEMPLATE = `
               </table>
 
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
+                <!-- Child info row -->
                 <tr>
                   <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
-                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">ชื่อเด็ก</p>
+                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">ชื่อเด็ก (ไทย)</p>
                     <p style="margin:0;font-size:15px;color:#141413;">{{child_name}}</p>
                   </td>
                   <td style="padding:4px;"></td>
                   <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
-                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">ประเภทการแข่งขัน</p>
-                    <p style="margin:0;font-size:15px;color:#141413;">{{youth_path_label}}</p>
+                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">ชื่อเด็ก (English)</p>
+                    <p style="margin:0;font-size:15px;color:#141413;">{{child_name_en}}</p>
                   </td>
                 </tr>
                 <tr><td colspan="3" height="8"></td></tr>
+
+                <!-- Path + attendance days -->
                 <tr>
-                  <td style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                  <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">ประเภทการเข้าร่วม</p>
+                    <p style="margin:0;font-size:15px;color:#141413;">{{youth_path_label}}</p>
+                  </td>
+                  <td style="padding:4px;"></td>
+                  <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">วันที่เข้าร่วม</p>
+                    <p style="margin:0;font-size:15px;color:#141413;">{{attendance_days}}</p>
+                  </td>
+                </tr>
+                <tr><td colspan="3" height="8"></td></tr>
+
+                <!-- Parent contact -->
+                <tr>
+                  <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">ผู้ปกครอง</p>
+                    <p style="margin:0;font-size:15px;color:#141413;">{{parent_full_name}}</p>
+                  </td>
+                  <td style="padding:4px;"></td>
+                  <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">เบอร์โทร</p>
+                    <p style="margin:0;font-size:15px;color:#141413;">{{parent_phone}}</p>
+                  </td>
+                </tr>
+                <tr><td colspan="3" height="8"></td></tr>
+
+                <!-- Check-in window -->
+                <tr>
+                  <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
                     <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">เปิดเช็คอิน</p>
                     <p style="margin:0;font-size:15px;color:#141413;">{{checkin_open_date}}</p>
                   </td>
-                  <td></td>
-                  <td style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                  <td style="padding:4px;"></td>
+                  <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
                     <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">ปิดเช็คอิน</p>
                     <p style="margin:0;font-size:15px;color:#141413;">{{checkin_close_date}}</p>
                   </td>
@@ -69,7 +100,7 @@ export const YOUTH_EMAIL_TEMPLATE = `
           <tr>
             <td style="background:#181715;padding:24px 40px;text-align:center;">
               <p style="margin:0 0 4px;font-size:13px;color:#a09d96;">{{tournament_name}}</p>
-              <p style="margin:0;font-size:11px;color:#8e8b82;">Tournament Registration System &bull; Powered by Cloudflare Workers</p>
+              <p style="margin:0;font-size:11px;color:#8e8b82;">All Thailand Registration System &bull; Powered by Cloudflare Workers</p>
             </td>
           </tr>
 

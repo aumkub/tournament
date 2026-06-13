@@ -34,13 +34,30 @@ export const ATTENDEE_EMAIL_TEMPLATE = `
               </table>
 
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
+                <!-- Name + Phone -->
                 <tr>
-                  <td style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                  <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">ชื่อ-นามสกุล</p>
+                    <p style="margin:0;font-size:15px;color:#141413;">{{registrant_name}}</p>
+                  </td>
+                  <td style="padding:4px;"></td>
+                  <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
+                    <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">เบอร์โทร</p>
+                    <p style="margin:0;font-size:15px;color:#141413;">{{phone}}</p>
+                  </td>
+                </tr>
+                <tr><td colspan="3" height="8"></td></tr>
+
+                <!-- Attendance days (full width) -->
+                <tr>
+                  <td colspan="3" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
                     <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">วันที่เข้าชม</p>
                     <p style="margin:0;font-size:15px;color:#141413;">{{attendance_days}}</p>
                   </td>
                 </tr>
-                <tr><td height="8"></td></tr>
+                <tr><td colspan="3" height="8"></td></tr>
+
+                <!-- Check-in window -->
                 <tr>
                   <td width="50%" style="padding:12px 16px;background:#faf9f5;border-radius:8px;vertical-align:top;">
                     <p style="margin:0 0 4px;font-size:12px;color:#6c6a64;font-weight:500;">เปิดเช็คอิน</p>
@@ -64,7 +81,7 @@ export const ATTENDEE_EMAIL_TEMPLATE = `
           <tr>
             <td style="background:#181715;padding:24px 40px;text-align:center;">
               <p style="margin:0 0 4px;font-size:13px;color:#a09d96;">{{tournament_name}}</p>
-              <p style="margin:0;font-size:11px;color:#8e8b82;">Tournament Registration System &bull; Powered by Cloudflare Workers</p>
+              <p style="margin:0;font-size:11px;color:#8e8b82;">All Thailand Registration System &bull; Powered by Cloudflare Workers</p>
             </td>
           </tr>
 

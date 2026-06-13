@@ -19,6 +19,6 @@ export const EMAIL_TEMPLATE_LABELS: Record<string, { th: string; en: string }> =
 };
 
 export const EMAIL_TEMPLATE_VARS: Record<string, string[]> = {
-	attendee: ["registrant_name", "tournament_name", "registration_type", "attendance_days", "checkin_open_date", "checkin_close_date", "qr_code_image", "submission_id"],
-	youth: ["registrant_name", "tournament_name", "registration_type", "child_name", "youth_path_label", "checkin_open_date", "checkin_close_date", "qr_code_image", "submission_id"],
+	attendee: ["registrant_name", "tournament_name", "registration_type", "phone", "attendance_days", "checkin_open_date", "checkin_close_date", "qr_code_image", "submission_id"],
+	youth: ["registrant_name", "tournament_name", "registration_type", "child_name", "child_name_en", "youth_path_label", "attendance_days", "parent_full_name", "parent_phone", "checkin_open_date", "checkin_close_date", "qr_code_image", "submission_id"],
 };

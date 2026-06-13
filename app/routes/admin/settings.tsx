@@ -412,12 +412,13 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 						<div className="flex items-center gap-3 min-w-0">
 							<div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${testMode ? "bg-warning/15" : "bg-surface-soft"}`}>
 								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={testMode ? "#d4a017" : "var(--color-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-									<path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/>
+									<path d="M9 3v8.5L4.5 18A2 2 0 0 0 6.31 21h11.38a2 2 0 0 0 1.81-2.5L15 11.5V3"/>
+									<line x1="9" y1="3" x2="15" y2="3"/>
 								</svg>
 							</div>
 							<div>
 								<p className="text-sm font-semibold text-ink m-0">โหมดทดสอบ</p>
-								<p className={`text-xs m-0 mt-0.5 ${testMode ? "text-[#92400e]" : "text-muted"}`}>
+								<p className={`!text-xs m-0 mt-0.5 ${testMode ? "text-[#92400e]" : "text-muted"}`}>
 									{testMode
 										? "เปิดอยู่ — ปุ่มกรอกข้อมูลอัตโนมัติ + demo scenarios แสดงในฟอร์ม"
 										: "ปิดอยู่ — ผู้ใช้จะไม่เห็นฟีเจอร์ทดสอบ"}
@@ -574,7 +575,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 
 			{/* ── Tab: Email ────────────────────────────── */}
 			{activeTab === "email" && (
-				<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
+				<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
 					{emailFormTypes.map((type) => {
 						const label = EMAIL_TEMPLATE_LABELS[type] || { th: type, en: type };
 						const customHtml = emailTemplates[type] ?? "";
@@ -593,7 +594,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 										display: "flex",
 										alignItems: "center",
 										justifyContent: "space-between",
-										padding: "var(--spacing-lg)",
+										padding: "16px var(--spacing-lg)",
 										background: "none",
 										border: "none",
 										cursor: "pointer",
@@ -627,15 +628,13 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 													<IconEye size={14} /> Preview
 												</button>
 											</div>
-											{isCustom && (
-												<button
-													className="btn btn-sm btn-ghost"
-													onClick={() => setEmailTemplates((prev) => { const n = { ...prev }; delete n[type]; return n; })}
-													title="รีเซ็ตเป็นเทมเพลตเริ่มต้นของระบบ"
-												>
-													<IconRotateCcw size={14} /> ใช้เทมเพลตเริ่มต้น
-												</button>
-											)}
+											<button
+												className="btn btn-sm btn-ghost"
+												onClick={() => setEmailTemplates((prev) => ({ ...prev, [type]: getDefaultEmailTemplate(type) }))}
+												title="โหลดเทมเพลตเริ่มต้นของระบบ"
+											>
+												<IconRotateCcw size={14} /> ใช้เทมเพลตเริ่มต้น
+											</button>
 										</div>
 
 										{emailView === "edit" ? (

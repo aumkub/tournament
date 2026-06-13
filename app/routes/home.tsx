@@ -131,7 +131,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 		<div className="min-h-screen">
 			{/* Hero */}
 			<div className="max-w-[800px] mx-auto px-lg py-xxl text-center">
-				<h1 className="!text-[clamp(32px,6vw,48px)] mb-md" style={{ letterSpacing: "-1.5px" }}>
+				<h1 className="!text-[clamp(32px,6vw,40px)] mb-md" style={{ letterSpacing: "-1.5px" }}>
 					all Thailand Registration
 				</h1>
 				<p className="text-[clamp(14px,2.5vw,18px)] mx-auto leading-relaxed max-w-[600px]" style={{ color: "var(--color-body)" }}>

@@ -89,7 +89,7 @@ export function CheckinFeed({ slug, typeLabels = {} }: CheckinFeedProps) {
 					<span className="!text-xs text-muted">{filtered.length} คน</span>
 				</div>
 			</div>
-			<div className="flex flex-col overflow-y-auto bg-surface-card p-2 rounded-sm" style={{ maxHeight: 320 }}>
+			<div className="flex flex-col overflow-y-auto bg-surface-card p-3 rounded-sm" style={{ maxHeight: 320 }}>
 					{filtered.map((evt, i) => (
 					<div
 						key={`${evt.checked_in_at}-${i}`}

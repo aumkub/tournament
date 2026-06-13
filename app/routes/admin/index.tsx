@@ -289,7 +289,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 					{/* Bottom gradient + title overlay */}
 					<div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)" }} />
 					<div className="absolute bottom-0 left-0 right-0 px-md pb-sm pt-lg flex items-end justify-between gap-sm">
-						<span className="text-white font-semibold !text-base leading-snug line-clamp-2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{t.name}</span>
+						<span className="text-white font-semibold !text-[20px] leading-snug line-clamp-2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{t.name}</span>
 						{/* Count chips */}
 						<div className="flex-shrink-0 flex gap-xs">
 							<span className="flex items-center gap-1 px-2 py-0.5 rounded-full !text-xs font-semibold" style={{ background: "rgba(255,255,255,0.18)", color: "#fff", backdropFilter: "blur(4px)" }}>
@@ -313,8 +313,8 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 								<span className="text-xs font-medium text-body">{label}</span>
 								<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: statusColor[status] + "20", color: statusColor[status] }}>{statusLabel[status]}</span>
 							</div>
-							<span className="text-[11px] text-muted leading-tight">เริ่ม: {fmtDate(open)}</span>
-							<span className="text-[11px] text-muted leading-tight">สิ้นสุด: {fmtDate(close)}</span>
+							<span className="!text-[12px] text-muted leading-tight">เริ่ม: {fmtDate(open)}</span>
+							<span className="!text-[12px] text-muted leading-tight">สิ้นสุด: {fmtDate(close)}</span>
 						</div>
 					))}
 				</div>
