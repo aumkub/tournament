@@ -71,6 +71,7 @@ export const ATTENDEE_EMAIL_TEMPLATE = `
                 </tr>
               </table>
 
+              {{success_message_block}}
               <hr style="margin:28px 0;border:none;border-top:1px solid #e6dfd8;" />
               <p style="margin:0;font-size:13px;color:#6c6a64;line-height:1.6;">
                 หากมีข้อสงสัย กรุณาติดต่อผู้จัดงาน อีเมลนี้สร้างโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับ

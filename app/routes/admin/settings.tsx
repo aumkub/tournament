@@ -88,6 +88,9 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 	const [competitorFormId, setCompetitorFormId] = useState<string>(t.competitor_form_id || "");
 	const [attendeeFormId, setAttendeeFormId] = useState<string>(t.attendee_form_id || "");
 	const [testMode, setTestMode] = useState<boolean>(!!t.test_mode);
+	const [successMessages, setSuccessMessages] = useState<Record<string, string>>(() => {
+		try { return JSON.parse(t.success_messages_json || "{}"); } catch { return {}; }
+	});
 	const [emailTemplates, setEmailTemplates] = useState<Record<string, string>>(() => {
 		try { return JSON.parse(t.email_templates_json || "{}"); } catch { return {}; }
 	});
@@ -161,6 +164,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			if (form.checkin_open_at) fd.append("checkin_open_at", form.checkin_open_at);
 			if (form.checkin_close_at) fd.append("checkin_close_at", form.checkin_close_at);
 			fd.append("email_templates_json", JSON.stringify(emailTemplates));
+			fd.append("success_messages_json", JSON.stringify(successMessages));
 			fd.append("competitor_url", form.competitor_url);
 			fd.append("attendee_url", form.attendee_url);
 			fd.append("competitor_title", form.competitor_title);
@@ -544,6 +548,35 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 									))}
 								</div>
 							</div>
+						</div>
+					</div>
+
+					{/* ── ข้อความยืนยันการลงทะเบียน ── */}
+					<div className="card">
+						<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-sm)" }}>
+							<IconMail size={16} />
+							<h2 style={{ fontSize: 18, margin: 0 }}>ข้อความยืนยันการลงทะเบียน</h2>
+						</div>
+						<p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 0, marginBottom: "var(--spacing-lg)" }}>
+							แสดงหลังลงทะเบียนสำเร็จ และในอีเมลยืนยัน — แยกตามประเภทผู้ลงทะเบียน
+						</p>
+						<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
+							{[
+								{ id: "competitor", label: "ผู้เข้าแข่งขัน (Competitor / Legacy)" },
+								...Object.values(FORM_CONFIGS).map((cfg) => ({ id: cfg.id, label: `${cfg.label.th} (${cfg.label.en})` })),
+							].map(({ id, label }) => (
+								<div key={id}>
+									<label className="label" style={{ fontSize: 13 }}>{label}</label>
+									<textarea
+										className="input textarea"
+										rows={3}
+										placeholder={`เช่น กำหนดการ, เวลานัดหมาย, ข้อมูลติดต่อ, ข้อควรทราบ... (เว้นว่างไว้ถ้าไม่ต้องการแสดง)`}
+										value={successMessages[id] || ""}
+										onChange={(e) => setSuccessMessages((prev) => ({ ...prev, [id]: e.target.value }))}
+										style={{ resize: "vertical" }}
+									/>
+								</div>
+							))}
 						</div>
 					</div>
 				</div>

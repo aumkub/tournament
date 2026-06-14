@@ -14,7 +14,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 	}
 
 	const reg = await env.DB.prepare(
-		"SELECT r.*, t.name as tournament_name, t.photo_url, t.competitor_title, t.attendee_title FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE r.id = ? AND t.slug = ?",
+		"SELECT r.*, t.name as tournament_name, t.photo_url, t.competitor_title, t.attendee_title, t.success_messages_json FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE r.id = ? AND t.slug = ?",
 	)
 		.bind(id, slug)
 		.first();
@@ -38,6 +38,12 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 			? ((reg.attendee_title as string) || "ผู้เข้าร่วมงาน")
 			: (reg.type as string);
 
+	let successMessage = "";
+	try {
+		const msgs = JSON.parse((reg.success_messages_json as string) || "{}") as Record<string, string>;
+		successMessage = (msgs[reg.type as string] || "").trim();
+	} catch {}
+
 	return {
 		id,
 		name,
@@ -47,6 +53,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 		type: reg.type as string,
 		typeLabel,
 		qrDataUrl,
+		successMessage,
 	};
 }
 
@@ -267,6 +274,16 @@ export default function SuccessPage({ loaderData }: Route.ComponentProps) {
 						<span className="text-sm font-mono font-semibold text-body select-all tracking-widest">{loaderData.id}</span>
 					</div>
 				</div>
+
+				{/* Custom success message from organizer */}
+				{loaderData.successMessage && (
+					<div className="card mb-lg" style={{ borderLeft: "4px solid var(--color-primary)", background: "var(--color-surface-soft)" }}>
+						<p className="text-sm font-semibold text-body m-0 mb-2">
+							{lang === "th" ? "ข้อความจากผู้จัดงาน" : "Message from organizer"}
+						</p>
+						<p className="text-sm text-body m-0 whitespace-pre-wrap leading-relaxed">{loaderData.successMessage}</p>
+					</div>
+				)}
 
 				{/* Email sent notice */}
 				{hasEmail ? (

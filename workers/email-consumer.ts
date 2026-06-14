@@ -62,6 +62,13 @@ export default {
 					? (dataJson.attendance_days as string[]).join(", ")
 					: (dataJson.attendance_days as string) || "-";
 
+				let successMessages: Record<string, string> = {};
+				try { successMessages = JSON.parse((tournament.success_messages_json as string) || "{}"); } catch { /* ignore */ }
+				const rawSuccessMsg = (successMessages[regType] || "").trim();
+				const successMessageBlock = rawSuccessMsg
+					? `<div style="margin:20px 0;padding:16px 20px;background:#fef9ec;border-left:4px solid #cc785c;border-radius:6px;"><p style="margin:0;font-size:14px;color:#3d3d3a;line-height:1.7;white-space:pre-wrap;">${rawSuccessMsg.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p></div>`
+					: "";
+
 				const renderedBody = renderEmailTemplate(bodyTemplate, {
 					registrant_name: name,
 					tournament_name: tournament.name as string,
@@ -82,6 +89,7 @@ export default {
 					).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }),
 					qr_code_image: generateQRCodeImageHTML(registrationId),
 					submission_id: registrationId,
+					success_message_block: successMessageBlock,
 				});
 
 				// Wrap body into full email HTML document

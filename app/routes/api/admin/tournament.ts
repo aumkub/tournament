@@ -105,6 +105,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		if (form_urls_json !== null) { sets.push("form_urls_json = ?"); binds.push(form_urls_json || "{}"); }
 		if (email_templates_json !== null) { sets.push("email_templates_json = ?"); binds.push(email_templates_json || "{}"); }
 		if (test_mode !== null) { sets.push("test_mode = ?"); binds.push(test_mode === "1" ? 1 : 0); }
+		const success_messages_json = formData.get("success_messages_json") as string | null;
+		if (success_messages_json !== null) { sets.push("success_messages_json = ?"); binds.push(success_messages_json || "{}"); }
 
 		// Handle password fields from form data
 		const pwAssistant = formData.get("password_assistant") as string | null;
