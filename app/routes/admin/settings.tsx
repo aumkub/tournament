@@ -561,10 +561,10 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 							แสดงหลังลงทะเบียนสำเร็จ และในอีเมลยืนยัน — แยกตามประเภทผู้ลงทะเบียน
 						</p>
 						<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
-							{[
-								{ id: "competitor", label: "ผู้เข้าแข่งขัน (Competitor / Legacy)" },
-								...Object.values(FORM_CONFIGS).map((cfg) => ({ id: cfg.id, label: `${cfg.label.th} (${cfg.label.en})` })),
-							].map(({ id, label }) => (
+							{Object.values(FORM_CONFIGS).map(({ id, label }) => ({
+								id,
+								label: `${label.th} (${label.en})`,
+							})).map(({ id, label }) => (
 								<div key={id}>
 									<label className="label" style={{ fontSize: 13 }}>{label}</label>
 									<textarea
