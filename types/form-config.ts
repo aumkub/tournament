@@ -31,6 +31,7 @@ export type FieldConfig = {
 	note?: I18n;
 	min?: number;
 	max?: number;
+	readOnly?: boolean;
 };
 
 export type StepCondition = {

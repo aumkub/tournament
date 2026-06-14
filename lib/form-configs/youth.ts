@@ -82,6 +82,8 @@ export const youthConfig: FormConfig = {
 					required: true,
 					min: 1,
 					max: 25,
+					readOnly: true,
+					note: { th: "คำนวณอัตโนมัติจากวันเกิด", en: "Auto-calculated from date of birth" },
 				},
 				{
 					key: "child_gender",

@@ -278,14 +278,17 @@ function Field({
 			</label>
 			{note && <p className="!text-xs text-muted !-mt-1 mb-3">{note}</p>}
 			<input
-				className={`input ${errorBorder}`}
+				className={`input ${errorBorder} ${field.readOnly ? "opacity-60 cursor-default bg-surface-soft" : ""}`}
 				type={isTelField ? "tel" : field.type}
 				inputMode={isTelField ? "numeric" : isEnField ? "text" : undefined}
 				lang={isEnField ? "en" : isThField ? "th" : undefined}
-				value={(value as string) || ""}
+				value={(value as string) ?? ""}
 				min={field.min}
 				max={field.max}
+				readOnly={field.readOnly}
+				tabIndex={field.readOnly ? -1 : undefined}
 				onChange={(e) => {
+					if (field.readOnly) return;
 					if (isTelField) {
 						onChange(field.key, formatPhoneInput(e.target.value));
 					} else {
@@ -551,7 +554,18 @@ export function DynamicMultiStepForm({
 	const totalSteps = activeSteps.length;
 
 	const update = useCallback((key: string, val: unknown) => {
-		setData((prev) => ({ ...prev, [key]: val }));
+		setData((prev) => {
+			const next: Record<string, unknown> = { ...prev, [key]: val };
+			if (key === "child_dob" && typeof val === "string" && val) {
+				const dob = new Date(val);
+				const today = new Date();
+				let age = today.getFullYear() - dob.getFullYear();
+				const m = today.getMonth() - dob.getMonth();
+				if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+				if (age >= 0 && age <= 30) next["child_age"] = age;
+			}
+			return next;
+		});
 		setErrorFields((prev) => { if (!prev.has(key)) return prev; const next = new Set(prev); next.delete(key); return next; });
 	}, []);
 
