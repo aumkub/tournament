@@ -19,6 +19,23 @@ function t(val: { th: string; en: string }, lang: Lang): string {
 	return val[lang] ?? val.th;
 }
 
+function filterByKey(key: string, val: string): string {
+	if (key.endsWith("_th") || key.includes("_th_") || key === "full_name_th" || key === "child_full_name_th") {
+		return val.replace(/[^฀-๿\s]/g, "");
+	}
+	if (key.endsWith("_en") || key.includes("_en_") || key === "full_name_en" || key === "child_full_name_en") {
+		return val.replace(/[^A-Za-z\s]/g, "");
+	}
+	return val;
+}
+
+function formatPhoneInput(val: string): string {
+	const digits = val.replace(/\D/g, "").slice(0, 10);
+	if (digits.length <= 3) return digits;
+	if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+	return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 function Field({
 	field,
 	value,
@@ -251,6 +268,9 @@ function Field({
 	}
 
 	// text, email, tel, date, number, url
+	const isTelField = field.type === "tel";
+	const isThField = field.key.endsWith("_th") || field.key.includes("_th_");
+	const isEnField = field.key.endsWith("_en") || field.key.includes("_en_");
 	return (
 		<div className="mb-lg">
 			<label className="label">
@@ -259,11 +279,19 @@ function Field({
 			{note && <p className="!text-xs text-muted !-mt-1 mb-3">{note}</p>}
 			<input
 				className={`input ${errorBorder}`}
-				type={field.type}
+				type={isTelField ? "tel" : field.type}
+				inputMode={isTelField ? "numeric" : isEnField ? "text" : undefined}
+				lang={isEnField ? "en" : isThField ? "th" : undefined}
 				value={(value as string) || ""}
 				min={field.min}
 				max={field.max}
-				onChange={(e) => onChange(field.key, e.target.value)}
+				onChange={(e) => {
+					if (isTelField) {
+						onChange(field.key, formatPhoneInput(e.target.value));
+					} else {
+						onChange(field.key, filterByKey(field.key, e.target.value));
+					}
+				}}
 			/>
 		</div>
 	);
