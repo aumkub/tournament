@@ -104,8 +104,7 @@ export const youthConfig: FormConfig = {
 					key: "child_school",
 					type: "text",
 					label: { th: "โรงเรียน / สังกัด", en: "School / Organization" },
-					required: false,
-					note: { th: "ถ้ามี", en: "If applicable" },
+					required: true,
 				},
 				{
 					key: "golf_experience_years",
@@ -139,14 +138,14 @@ export const youthConfig: FormConfig = {
 					type: "url",
 					label: { th: "วิดีโอสวิง", en: "Swing Video" },
 					required: true,
-					note: { th: "ลิงก์วิดีโอ เช่น YouTube, TikTok, Instagram, Google Drive, ฯลฯ", en: "Video link — YouTube, TikTok, Instagram, Google Drive, etc." },
+					note: { th: "ลิงก์วิดีโอ เช่น YouTube, TikTok, Instagram, Google Drive ฯลฯ — กรุณาตั้งค่าให้เป็นสาธารณะ (Public) หรือ 'ทุกคนที่มีลิงก์สามารถดูได้' ก่อนวาง", en: "Video link — YouTube, TikTok, Instagram, Google Drive, etc. Make sure the link is set to Public or 'Anyone with the link can view' before submitting." },
 				},
 				{
 					key: "intro_video_url",
 					type: "url",
 					label: { th: "วิดีโอแนะนำตัว", en: "Introduction Video" },
 					required: true,
-					note: { th: "ลิงก์วิดีโอ เช่น YouTube, TikTok, Instagram, Google Drive, ฯลฯ", en: "Video link — YouTube, TikTok, Instagram, Google Drive, etc." },
+					note: { th: "ลิงก์วิดีโอ เช่น YouTube, TikTok, Instagram, Google Drive ฯลฯ — กรุณาตั้งค่าให้เป็นสาธารณะ (Public) หรือ 'ทุกคนที่มีลิงก์สามารถดูได้' ก่อนวาง", en: "Video link — YouTube, TikTok, Instagram, Google Drive, etc. Make sure the link is set to Public or 'Anyone with the link can view' before submitting." },
 				},
 				{
 					key: "scorecards",
