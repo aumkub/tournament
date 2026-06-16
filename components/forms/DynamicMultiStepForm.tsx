@@ -525,6 +525,14 @@ function matchCondition(cond: import("../../types/form-config").StepCondition, d
 	return val === cond.value;
 }
 
+function scrollBelowCover() {
+	const cover = document.getElementById("register-cover");
+	if (cover) {
+		const top = cover.getBoundingClientRect().bottom + window.scrollY;
+		window.scrollTo({ top, behavior: "smooth" });
+	}
+}
+
 function resolveActiveSteps(steps: StepConfig[], data: Record<string, unknown>): StepConfig[] {
 	return steps.filter((s) => {
 		if (s.conditions) return s.conditions.every((c) => matchCondition(c, data));
@@ -591,13 +599,13 @@ export function DynamicMultiStepForm({
 	const handleNext = () => {
 		if (!validateStep(currentStep)) return;
 		setStepIndex((i) => Math.min(i + 1, resolveActiveSteps(config.steps, data).length - 1));
-		window.scrollTo(0, 0);
+		scrollBelowCover();
 	};
 
 	const handleBack = () => {
 		setError(null); setIsDuplicate(false); setErrorFields(new Set());
 		setStepIndex((i) => Math.max(i - 1, 0));
-		window.scrollTo(0, 0);
+		scrollBelowCover();
 	};
 
 	const handleSubmit = async () => {

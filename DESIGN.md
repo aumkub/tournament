@@ -190,7 +190,7 @@ Defined in `app/app.css` — use directly as Tailwind-style class names.
 ```html
 <div class="grid gap-lg" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
   <div class="card p-0 flex flex-col overflow-hidden">
-    <div class="w-full" style="aspect-ratio: 16/7">cover</div>
+    <div class="w-full" style="aspect-ratio: 16/9">cover</div>
     <div class="p-lg">content</div>
   </div>
 </div>

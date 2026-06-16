@@ -149,10 +149,10 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 		<div>
 			{/* Cover Banner */}
 			<div
+				id="register-cover"
 				style={{
 					width: "100%",
-					aspectRatio: "16/7",
-					maxHeight: 320,
+					aspectRatio: "16/9",
 					overflow: "hidden",
 					position: "relative",
 					background: "#f5f0e8",
@@ -186,7 +186,7 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 					alignItems: "flex-end",
 					justifyContent: "space-between",
 				}}>
-					<h1 style={{ fontSize: 24, color: "white", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+					<h1 style={{ fontSize: 24, color: "white", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.3)", opacity: 0 }}>
 						{loaderData.tournamentName}
 					</h1>
 					<span style={{

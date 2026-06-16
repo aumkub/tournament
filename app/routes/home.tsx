@@ -54,7 +54,7 @@ function TournamentCard({ t }: { t: any }) {
 	return (
 		<div className="card flex flex-col overflow-hidden !p-0">
 			{/* Cover Photo */}
-			<div className="relative overflow-hidden w-full" style={{ aspectRatio: "16/7", background: "var(--color-surface-soft)" }}>
+			<div className="relative overflow-hidden w-full" style={{ aspectRatio: "16/9", background: "var(--color-surface-soft)" }}>
 				{t.coverUrl ? (
 					<img src={t.coverUrl} alt={t.name} className="w-full h-full object-cover" />
 				) : (

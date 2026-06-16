@@ -225,7 +225,7 @@ export default function SuccessPage({ loaderData }: Route.ComponentProps) {
 			<Confetti />
 
 			{/* Cover Banner */}
-			<div className="w-full relative overflow-hidden" style={{ aspectRatio: "16/7", maxHeight: 280, background: "var(--color-surface-soft)" }}>
+			<div className="w-full relative overflow-hidden" style={{ aspectRatio: "16/9", maxHeight: 280, background: "var(--color-surface-soft)" }}>
 				{loaderData.coverUrl ? (
 					<img src={loaderData.coverUrl} alt={loaderData.tournamentName} className="w-full h-full object-cover" />
 				) : (

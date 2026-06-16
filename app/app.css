@@ -376,7 +376,7 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 	justify-content: center;
 	gap: 8px;
 	padding: 12px 20px;
-	min-height: 40px;
+	min-height: 44px;
 	font-family: var(--font-body);
 	font-weight: 500;
 	font-size: 14px;
@@ -450,10 +450,10 @@ h6 { font-size: 18px; line-height: 1.4; font-weight: 600; }
 	background-color: var(--color-canvas);
 	border: 1px solid var(--color-hairline);
 	border-radius: var(--radius-md);
-	min-height: 40px;
+	min-height: 44px;
 	font-family: var(--font-body);
-	font-size: 14px;
-	padding: 6px 14px;
+	font-size: 14px; /* 16px prevents iOS Safari auto-zoom on focus */
+	padding: 8px 14px;
 	color: var(--color-ink);
 	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 	outline: none;
@@ -1314,4 +1314,24 @@ p, span, li, td, th, a, option {
 	clip: rect(0, 0, 0, 0);
 	white-space: nowrap;
 	border-width: 0;
+}
+
+/* ── Mobile overrides ────────────────────────────── */
+
+@media (max-width: 640px) {
+	/* Tighter card padding on small screens */
+	.card {
+		padding: var(--spacing-md);
+	}
+
+	/* Ensure tap targets are always large enough */
+	.btn {
+		min-height: 48px;
+		font-size: 15px;
+	}
+
+	/* Upload zone: bigger tap area */
+	.upload-zone {
+		padding: var(--spacing-xl);
+	}
 }

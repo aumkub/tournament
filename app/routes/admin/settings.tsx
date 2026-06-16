@@ -297,7 +297,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 							style={{
 								position: "relative",
 								width: "100%",
-								aspectRatio: "16/7",
+								aspectRatio: "16/9",
 								borderRadius: "var(--radius-lg)",
 								overflow: "hidden",
 								background: "#f5f0e8",
