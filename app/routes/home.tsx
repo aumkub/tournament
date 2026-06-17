@@ -13,7 +13,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
 
 	const results = await env.DB.prepare(
-		"SELECT id, name, slug, photo_url, competitor_url, attendee_url, competitor_title, attendee_title, competitor_title_en, attendee_title_en, form_urls_json, registration_open_at, registration_close_at FROM tournaments ORDER BY created_at DESC",
+		"SELECT id, name, slug, photo_url, competitor_url, attendee_url, competitor_title, attendee_title, competitor_title_en, attendee_title_en, form_urls_json, registration_open_at, registration_close_at FROM tournaments WHERE deleted_at IS NULL ORDER BY created_at DESC",
 	).all();
 
 	const tournaments = results.results.map((t: any) => ({
@@ -132,7 +132,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 			{/* Hero */}
 			<div className="max-w-[800px] mx-auto px-lg py-xxl text-center">
 				<h1 className="!text-[clamp(32px,6vw,40px)] mb-md" style={{ letterSpacing: "-1.5px" }}>
-					all Thailand Registration
+					Registration System
 				</h1>
 				<p className="text-[clamp(14px,2.5vw,18px)] mx-auto leading-relaxed max-w-[600px]" style={{ color: "var(--color-body)" }}>
 					ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน

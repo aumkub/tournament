@@ -50,7 +50,9 @@
 		"check": "tsc && react-router build && wrangler deploy --dry-run",
 		"deploy": "npm run build && wrangler deploy",
 		"dev": "react-router dev",
-		"dev:remote": "npm run build && wrangler dev --remote",
+		"dev:local": "WRANGLER_DISABLE_REMOTE_BINDINGS=true react-router dev",
+		"migrate": "for f in drizzle/*.sql; do wrangler d1 execute tournament-db --remote --file=\"$f\"; done",
+		"migrate:local": "for f in drizzle/*.sql; do wrangler d1 execute tournament-db --local --file=\"$f\"; done",
 		"preview": "npm run build && vite preview",
 		"typecheck": "npm run typegen && tsc -b"
 	},

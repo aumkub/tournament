@@ -14,7 +14,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 	}
 
 	const reg = await env.DB.prepare(
-		"SELECT r.*, t.name as tournament_name, t.photo_url, t.competitor_title, t.attendee_title, t.success_messages_json FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE r.id = ? AND t.slug = ?",
+		"SELECT r.*, t.name as tournament_name, t.photo_url, t.competitor_title, t.attendee_title, t.success_messages_json FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE r.id = ? AND t.slug = ? AND t.deleted_at IS NULL",
 	)
 		.bind(id, slug)
 		.first();

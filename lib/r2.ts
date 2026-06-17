@@ -2,6 +2,14 @@ export function getPublicUrl(bucketPublicDomain: string, key: string): string {
 	return `https://${bucketPublicDomain}/${key}`;
 }
 
+/** Local R2 first; fall back to BUCKET_REMOTE (remote prod bucket) in dev. */
+export async function getR2Object(env: Env, key: string): Promise<R2ObjectBody | null> {
+	const local = await env.BUCKET.get(key);
+	if (local) return local;
+	if (env.BUCKET_REMOTE) return env.BUCKET_REMOTE.get(key);
+	return null;
+}
+
 export function buildUploadKey(
 	tournamentId: string,
 	registrationId: string,

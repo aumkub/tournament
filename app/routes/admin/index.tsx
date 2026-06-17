@@ -1,10 +1,11 @@
 import type { Route } from "./+types/admin/index";
-import { parseCookie, verifySession } from "../../../lib/kv-session";
+import { parseCookie, verifySession, hasRole } from "../../../lib/kv-session";
 import { useState, useEffect, useRef } from "react";
 import {
 	IconLock,
 	IconPlus,
 	IconX,
+	IconRotateCcw,
 } from "../../../components/ui/icons";
 import type { Role } from "../../../types/registration";
 
@@ -21,14 +22,30 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			SUM(CASE WHEN r.checked_in = 1 THEN 1 ELSE 0 END) as checkin_count
 		FROM tournaments t
 		LEFT JOIN registrations r ON r.tournament_id = t.id
+		WHERE t.deleted_at IS NULL
 		GROUP BY t.id
 		ORDER BY t.created_at DESC`,
 	).all();
 
-
+	let deletedTournaments: unknown[] = [];
+	if (session && hasRole(session, "super_admin")) {
+		const deleted = await env.DB.prepare(
+			`SELECT t.id, t.name, t.slug, t.photo_url, t.deleted_at,
+				t.registration_open_at, t.registration_close_at,
+				t.checkin_open_at, t.checkin_close_at,
+				COUNT(r.id) as registration_count,
+				SUM(CASE WHEN r.checked_in = 1 THEN 1 ELSE 0 END) as checkin_count
+			FROM tournaments t
+			LEFT JOIN registrations r ON r.tournament_id = t.id
+			WHERE t.deleted_at IS NOT NULL
+			GROUP BY t.id
+			ORDER BY t.deleted_at DESC`,
+		).all();
+		deletedTournaments = deleted.results;
+	}
 
 	if (!session) {
-		return { authenticated: false as const, role: null, tournamentId: null, tournaments: results.results, redirectSlug: null };
+		return { authenticated: false as const, role: null, tournamentId: null, tournaments: results.results, deletedTournaments: [], redirectSlug: null };
 	}
 
 	if (session.role === "assistant") {
@@ -38,6 +55,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			role: session.role as Role,
 			tournamentId: session.tournamentId,
 			tournaments: results.results,
+			deletedTournaments: [],
 			redirectSlug: t?.slug || null,
 
 		};
@@ -48,6 +66,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		role: session.role as Role,
 		tournamentId: session.tournamentId,
 		tournaments: results.results,
+		deletedTournaments,
 		redirectSlug: null,
 
 	};
@@ -66,6 +85,9 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 	const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
 	const [selectedSlug, setSelectedSlug] = useState("");
 	const tournaments = loaderData.tournaments as any[];
+	const deletedTournaments = (loaderData.deletedTournaments ?? []) as any[];
+	const [restoringId, setRestoringId] = useState<string | null>(null);
+	const [restoreError, setRestoreError] = useState<string | null>(null);
 
 	// Create tournament state
 	const createDialogRef = useRef<HTMLDialogElement>(null);
@@ -269,7 +291,25 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 		return <span style={{ width: 7, height: 7, borderRadius: "50%", background: colors[status], display: "inline-block", flexShrink: 0 }} />;
 	};
 
-	const TournamentCard = ({ t, href }: { t: any; href: string }) => {
+	const handleRestore = async (id: string) => {
+		setRestoringId(id);
+		setRestoreError(null);
+		try {
+			const res = await fetch(`/api/admin/tournaments/${id}/restore`, { method: "POST" });
+			const json = await res.json() as { ok?: boolean; error?: string };
+			if (!res.ok) {
+				setRestoreError(json.error ?? "กู้คืนไม่สำเร็จ");
+				setRestoringId(null);
+				return;
+			}
+			window.location.reload();
+		} catch {
+			setRestoreError("กู้คืนไม่สำเร็จ");
+			setRestoringId(null);
+		}
+	};
+
+	const TournamentCard = ({ t, href, deleted }: { t: any; href?: string; deleted?: boolean }) => {
 		const coverUrl = t.photo_url ? `/api/file?key=${encodeURIComponent(t.photo_url)}` : null;
 		const regStatus = periodStatus(t.registration_open_at, t.registration_close_at);
 		const checkinStatus = periodStatus(t.checkin_open_at, t.checkin_close_at);
@@ -278,14 +318,19 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 		const statusLabel = { open: "เปิด", upcoming: "เร็วๆ นี้", closed: "ปิด", none: "" } as const;
 		const statusColor = { open: "#16a34a", upcoming: "#ca8a04", closed: "#9ca3af", none: "#9ca3af" } as const;
 
-		return (
-			<a href={href} className="card !p-0 flex flex-col overflow-hidden no-underline group transition-all hover:shadow-lg">
+		const cardInner = (
+			<>
 				{/* 16/9 cover with gradient overlay */}
 				<div className="relative w-full flex-shrink-0 overflow-hidden" style={{ aspectRatio: "16/9", background: "var(--color-surface-soft)" }}>
 					{coverUrl
-						? <img src={coverUrl} alt={t.name} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" style={{ transitionDuration: "400ms" }} />
-						: <div className="w-full h-full flex items-center justify-center text-[40px] font-black select-none" style={{ color: "var(--color-muted-soft)" }}>{t.name.charAt(0).toUpperCase()}</div>
+						? <img src={coverUrl} alt={t.name} className={`w-full h-full object-cover ${!deleted ? "transition-transform group-hover:scale-[1.02]" : "opacity-60 grayscale"}`} style={{ transitionDuration: "400ms" }} />
+						: <div className="w-full h-full flex items-center justify-center text-[40px] font-black select-none opacity-60" style={{ color: "var(--color-muted-soft)" }}>{t.name.charAt(0).toUpperCase()}</div>
 					}
+					{deleted && (
+						<span className="absolute top-3 left-3 px-2 py-0.5 rounded-full !text-xs font-semibold" style={{ background: "rgba(220,38,38,0.85)", color: "#fff" }}>
+							ถูกลบ
+						</span>
+					)}
 					{/* Bottom gradient + title overlay */}
 					<div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)" }} />
 					<div className="absolute bottom-0 left-0 right-0 px-md pb-sm pt-lg flex items-end justify-between gap-sm">
@@ -318,6 +363,34 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						</div>
 					))}
 				</div>
+			</>
+		);
+
+		if (deleted) {
+			return (
+				<div className="card !p-0 flex flex-col overflow-hidden opacity-90">
+					{cardInner}
+					<div className="px-md py-sm border-t border-hairline flex items-center justify-between gap-sm">
+						<span className="!text-xs text-muted">
+							ลบเมื่อ: {fmtDate(t.deleted_at)}
+						</span>
+						<button
+							type="button"
+							className="btn btn-sm btn-secondary"
+							disabled={restoringId === t.id}
+							onClick={() => handleRestore(t.id)}
+						>
+							<IconRotateCcw size={14} />
+							{restoringId === t.id ? "กำลังกู้คืน..." : "กู้คืน"}
+						</button>
+					</div>
+				</div>
+			);
+		}
+
+		return (
+			<a href={href} className="card !p-0 flex flex-col overflow-hidden no-underline group transition-all hover:shadow-lg">
+				{cardInner}
 			</a>
 		);
 	};
@@ -365,6 +438,22 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 							ไม่พบรายการของคุณ — กรุณาเข้าสู่ระบบใหม่
 						</div>
 					)}
+				</div>
+			)}
+
+			{isSuperAdmin && deletedTournaments.length > 0 && (
+				<div className="mt-xl pt-xl border-t border-hairline">
+					{restoreError && (
+						<div className="p-sm p-md bg-[#fef2f2] border border-error rounded-md text-error text-sm mb-md">
+							{restoreError}
+						</div>
+					)}
+					<h3 className="!text-[20px] font-semibold m-0 mb-md text-muted">รายการที่ถูกลบ</h3>
+					<div className="grid gap-sm" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
+						{deletedTournaments.map((t: any) => (
+							<TournamentCard key={t.id} t={t} deleted />
+						))}
+					</div>
 				</div>
 			)}
 

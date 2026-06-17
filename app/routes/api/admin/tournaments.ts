@@ -10,7 +10,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const results = await env.DB.prepare("SELECT * FROM tournaments ORDER BY created_at DESC").all();
+	const results = await env.DB.prepare("SELECT * FROM tournaments WHERE deleted_at IS NULL ORDER BY created_at DESC").all();
 	return Response.json({ tournaments: results.results });
 }
 

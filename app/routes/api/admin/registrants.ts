@@ -20,7 +20,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 	const checkedIn = url.searchParams.get("checked_in");
 	const search = url.searchParams.get("search") || "";
 
-	let query = `SELECT r.* FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ?`;
+	let query = `SELECT r.* FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? AND t.deleted_at IS NULL`;
 	const binds: unknown[] = [slug];
 
 	if (type) {
@@ -42,7 +42,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 	const results = await env.DB.prepare(query).bind(...binds).all();
 
 	// Count total
-	let countQuery = `SELECT COUNT(*) as total FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ?`;
+	let countQuery = `SELECT COUNT(*) as total FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? AND t.deleted_at IS NULL`;
 	const countBinds: unknown[] = [slug];
 	if (type) {
 		countQuery += ` AND r.type = ?`;
@@ -61,7 +61,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
 	// Distinct types with counts for filter dropdown
 	const typesResult = await env.DB.prepare(
-		`SELECT r.type, COUNT(*) as cnt FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? GROUP BY r.type ORDER BY cnt DESC`,
+		`SELECT r.type, COUNT(*) as cnt FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? AND t.deleted_at IS NULL GROUP BY r.type ORDER BY cnt DESC`,
 	)
 		.bind(slug)
 		.all();

@@ -12,7 +12,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 	}
 
 	const tournament = await env.DB.prepare(
-		"SELECT id FROM tournaments WHERE slug = ?",
+		"SELECT id FROM tournaments WHERE slug = ? AND deleted_at IS NULL",
 	).bind(slug).first();
 	if (!tournament) return Response.json({ error: "Not found" }, { status: 404 });
 

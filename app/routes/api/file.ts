@@ -1,4 +1,5 @@
 import type { Route } from "./+types/api/file";
+import { getR2Object } from "../../../lib/r2";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
@@ -9,7 +10,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		return new Response("Missing key", { status: 400 });
 	}
 
-	const object = await env.BUCKET.get(key);
+	const object = await getR2Object(env, key);
 	if (!object) {
 		return new Response("Not found", { status: 404 });
 	}

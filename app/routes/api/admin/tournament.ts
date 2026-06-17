@@ -1,24 +1,25 @@
 import type { Route } from "./+types/api/admin/tournament";
 import { parseCookie, verifySession, hasRole } from "../../../../lib/kv-session";
 import { hashPassword } from "../../../../lib/auth";
+import { TOURNAMENT_NOT_DELETED, buildDeletedSlug } from "../../../../lib/tournament-query";
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
 	const token = parseCookie(request.headers.get("Cookie"));
 	const session = await verifySession(env.SESSIONS, token || "");
 	if (!session || !hasRole(session, "super_admin")) {
-		return Response.json({ error: "Unauthorized" }, { status: 401 });
+		return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 	}
 
 	const slug = params.slug;
 	const tournament = await env.DB.prepare(
-		"SELECT * FROM tournaments WHERE slug = ?",
+		`SELECT * FROM tournaments WHERE slug = ? AND ${TOURNAMENT_NOT_DELETED}`,
 	)
 		.bind(slug)
 		.first();
 
 	if (!tournament) {
-		return Response.json({ error: "Not found" }, { status: 404 });
+		return new Response(JSON.stringify({ error: "Not found" }), { status: 404 });
 	}
 
 	return Response.json({ tournament });
@@ -33,6 +34,30 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 	}
 
 	const slug = params.slug;
+
+	if (request.method === "DELETE") {
+		const body = await request.json() as { confirm?: string };
+		if (body.confirm !== "ยืนยันการลบ") {
+			return Response.json({ error: "พิมพ์ ยืนยันการลบ เพื่อยืนยัน" }, { status: 400 });
+		}
+
+		const tournament = await env.DB.prepare(
+			`SELECT id, slug FROM tournaments WHERE slug = ? AND ${TOURNAMENT_NOT_DELETED}`,
+		).bind(slug).first();
+
+		if (!tournament) {
+			return Response.json({ error: "ไม่พบรายการ" }, { status: 404 });
+		}
+
+		const now = Date.now();
+		const deletedSlug = buildDeletedSlug(tournament.slug as string, now);
+
+		await env.DB.prepare(
+			`UPDATE tournaments SET deleted_at = ?, slug = ?, updated_at = ? WHERE id = ?`,
+		).bind(now, deletedSlug, now, tournament.id).run();
+
+		return Response.json({ ok: true });
+	}
 	const contentType = request.headers.get("Content-Type") || "";
 
 	// Handle multipart/form-data for cover photo upload
@@ -65,7 +90,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 				return Response.json({ error: "Cover photo must be under 10MB" }, { status: 400 });
 			}
 			// Get tournament id for the key
-			const existing = await env.DB.prepare("SELECT id FROM tournaments WHERE slug = ?").bind(slug).first();
+			const existing = await env.DB.prepare("SELECT id FROM tournaments WHERE slug = ? AND deleted_at IS NULL").bind(slug).first();
 			const tid = (existing?.id as string) || slug;
 			const key = `covers/${tid}/cover-${Date.now()}.${file.name.split(".").pop() || "jpg"}`;
 			await env.BUCKET.put(key, file.stream(), {
@@ -114,7 +139,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		const pwSuperAdmin = formData.get("password_super_admin") as string | null;
 
 		if (pwAssistant || pwAdmin || pwSuperAdmin) {
-			const existing = await env.DB.prepare("SELECT passwords_json FROM tournaments WHERE slug = ?").bind(slug).first();
+			const existing = await env.DB.prepare("SELECT passwords_json FROM tournaments WHERE slug = ? AND deleted_at IS NULL").bind(slug).first();
 			const currentPw = JSON.parse((existing?.passwords_json as string) || "{}");
 			if (pwAssistant) currentPw.assistant = await hashPassword(pwAssistant);
 			if (pwAdmin) currentPw.admin = await hashPassword(pwAdmin);
@@ -180,7 +205,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 	if (body.email_templates_json !== undefined) { sets.push("email_templates_json = ?"); binds.push(body.email_templates_json || "{}"); }
 
 	if (body.passwords) {
-		const existing = await env.DB.prepare("SELECT passwords_json FROM tournaments WHERE slug = ?").bind(slug).first();
+		const existing = await env.DB.prepare("SELECT passwords_json FROM tournaments WHERE slug = ? AND deleted_at IS NULL").bind(slug).first();
 		const currentPw = JSON.parse((existing?.passwords_json as string) || "{}");
 		if (body.passwords.assistant) currentPw.assistant = await hashPassword(body.passwords.assistant);
 		if (body.passwords.admin) currentPw.admin = await hashPassword(body.passwords.admin);

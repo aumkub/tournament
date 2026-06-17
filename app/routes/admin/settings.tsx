@@ -35,7 +35,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 		throw new Response("Unauthorized", { status: 401 });
 	}
 
-	const tournament = await env.DB.prepare("SELECT * FROM tournaments WHERE slug = ?")
+	const tournament = await env.DB.prepare("SELECT * FROM tournaments WHERE slug = ? AND deleted_at IS NULL")
 		.bind(slug)
 		.first();
 
@@ -208,8 +208,10 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 	// Reset tab state
 	const [resetRegConfirm, setResetRegConfirm] = useState("");
 	const [resetCheckinConfirm, setResetCheckinConfirm] = useState("");
+	const [deleteTournamentConfirm, setDeleteTournamentConfirm] = useState("");
 	const [resetRegLoading, setResetRegLoading] = useState(false);
 	const [resetCheckinLoading, setResetCheckinLoading] = useState(false);
+	const [deleteTournamentLoading, setDeleteTournamentLoading] = useState(false);
 	const [resetMessage, setResetMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
 	const handleClearRegistrations = async () => {
@@ -236,6 +238,29 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			if (json.ok) setResetCheckinConfirm("");
 		} catch { setResetMessage({ ok: false, text: "เกิดข้อผิดพลาด" }); }
 		setResetCheckinLoading(false);
+	};
+
+	const handleDeleteTournament = async () => {
+		if (deleteTournamentConfirm !== "ยืนยันการลบ") return;
+		setDeleteTournamentLoading(true);
+		setResetMessage(null);
+		try {
+			const res = await fetch(`/api/admin/${t.slug}/tournament`, {
+				method: "DELETE",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ confirm: "ยืนยันการลบ" }),
+			});
+			const json = await res.json() as { ok?: boolean; error?: string };
+			if (!res.ok) {
+				setResetMessage({ ok: false, text: json.error ?? "เกิดข้อผิดพลาด" });
+				setDeleteTournamentLoading(false);
+				return;
+			}
+			window.location.href = "/portal";
+		} catch {
+			setResetMessage({ ok: false, text: "เกิดข้อผิดพลาด" });
+			setDeleteTournamentLoading(false);
+		}
 	};
 
 	return (
@@ -271,7 +296,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			)}
 
 			{/* Tabs */}
-			<div className="flex gap-1 mb-lg border-b border-hairline overflow-x-auto">
+			<div className="flex gap-1 mb-lg border-b border-hairline">
 				{tabs.map((tab) => (
 					<button
 						key={tab.id}
@@ -766,6 +791,35 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 							onClick={handleClearCheckins}
 						>
 							{resetCheckinLoading ? "กำลังรีเซ็ต..." : "รีเซ็ตการเช็คอินทั้งหมด"}
+						</button>
+					</div>
+
+					{/* Delete tournament */}
+					<div className="card border-2 border-error/50">
+						<div className="flex items-start gap-3 mb-md">
+							<div className="flex-shrink-0 w-9 h-9 rounded-lg bg-error/10 flex items-center justify-center mt-0.5">
+								<IconAlertTriangle size={16} color="var(--color-error)" />
+							</div>
+							<div>
+								<h3 className="text-base font-semibold text-ink m-0 mb-1">ลบรายการ (Soft Delete)</h3>
+								<p className="text-sm text-muted m-0">ซ่อนรายการออกจากระบบทั้งหมด ข้อมูลยังคงอยู่ในฐานข้อมูล ไม่สามารถกู้คืนผ่าน UI ได้</p>
+							</div>
+						</div>
+						<label className="label text-sm">พิมพ์ <strong>ยืนยันการลบ</strong> เพื่อยืนยัน</label>
+						<input
+							className="input mb-md"
+							value={deleteTournamentConfirm}
+							onChange={(e) => setDeleteTournamentConfirm(e.target.value)}
+							placeholder="ยืนยันการลบ"
+							autoComplete="off"
+						/>
+						<button
+							className="btn"
+							style={{ background: "var(--color-error)", color: "#fff", opacity: deleteTournamentConfirm === "ยืนยันการลบ" ? 1 : 0.4, cursor: deleteTournamentConfirm === "ยืนยันการลบ" ? "pointer" : "not-allowed" }}
+							disabled={deleteTournamentConfirm !== "ยืนยันการลบ" || deleteTournamentLoading}
+							onClick={handleDeleteTournament}
+						>
+							{deleteTournamentLoading ? "กำลังลบ..." : "ลบรายการนี้"}
 						</button>
 					</div>
 				</div>

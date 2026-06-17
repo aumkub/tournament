@@ -20,14 +20,14 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
       SUM(CASE WHEN checked_in = 1 THEN 1 ELSE 0 END) as checked_in,
       SUM(CASE WHEN type = 'competitor' AND checked_in = 1 THEN 1 ELSE 0 END) as competitors_checked_in,
       SUM(CASE WHEN type = 'attendee' AND checked_in = 1 THEN 1 ELSE 0 END) as attendees_checked_in
-    FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ?`,
+    FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? AND t.deleted_at IS NULL`,
 	)
 		.bind(slug)
 		.first();
 
 	// Get limits from tournament
 	const tournament = await env.DB.prepare(
-		"SELECT registration_limit, competitor_limit, attendee_limit FROM tournaments WHERE slug = ?",
+		"SELECT registration_limit, competitor_limit, attendee_limit FROM tournaments WHERE slug = ? AND deleted_at IS NULL",
 	)
 		.bind(slug)
 		.first();

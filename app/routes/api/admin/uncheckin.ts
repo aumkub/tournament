@@ -13,7 +13,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 	const { id } = await request.json() as { id: string };
 	if (!id) return Response.json({ error: "id required" }, { status: 400 });
 
-	const tournament = await env.DB.prepare("SELECT id FROM tournaments WHERE slug = ?")
+	const tournament = await env.DB.prepare("SELECT id FROM tournaments WHERE slug = ? AND deleted_at IS NULL")
 		.bind(slug).first();
 	if (!tournament) return Response.json({ error: "Not found" }, { status: 404 });
 

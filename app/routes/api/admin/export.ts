@@ -16,7 +16,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
 	// Load tournament for form config mapping
 	const tournament = await env.DB.prepare(
-		"SELECT id, name, competitor_form_id, attendee_form_id, competitor_title, attendee_title, form_urls_json FROM tournaments WHERE slug = ?",
+		"SELECT id, name, competitor_form_id, attendee_form_id, competitor_title, attendee_title, form_urls_json FROM tournaments WHERE slug = ? AND deleted_at IS NULL",
 	)
 		.bind(slug)
 		.first();
@@ -60,7 +60,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
 	// Fetch all registrations
 	const results = await env.DB.prepare(
-		`SELECT r.* FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? ORDER BY r.submitted_at DESC`,
+		`SELECT r.* FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? AND t.deleted_at IS NULL ORDER BY r.submitted_at DESC`,
 	)
 		.bind(slug)
 		.all();

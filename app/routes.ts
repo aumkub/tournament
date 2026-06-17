@@ -24,6 +24,7 @@ export default [
 
 	// Admin API routes
 	route("api/admin/tournaments", "routes/api/admin/tournaments.ts"),
+	route("api/admin/tournaments/:id/restore", "routes/api/admin/tournament-restore.ts"),
 	route("api/admin/:slug/registrants", "routes/api/admin/registrants.ts"),
 	route("api/admin/:slug/stats", "routes/api/admin/stats.ts"),
 	route("api/admin/:slug/export", "routes/api/admin/export.ts"),

@@ -17,7 +17,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 		`SELECT r.data_json, r.type, r.checked_in_at
 		 FROM registrations r
 		 JOIN tournaments t ON r.tournament_id = t.id
-		 WHERE t.slug = ? AND r.checked_in = 1
+		 WHERE t.slug = ? AND t.deleted_at IS NULL AND r.checked_in = 1
 		 ORDER BY r.checked_in_at DESC
 		 LIMIT ?`,
 	)

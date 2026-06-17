@@ -31,6 +31,7 @@ export const tournaments = sqliteTable("tournaments", {
 	updated_at: integer("updated_at", { mode: "timestamp" })
 		.notNull()
 		.$defaultFn(() => new Date()),
+	deleted_at: integer("deleted_at", { mode: "timestamp" }),
 });
 
 export const registrations = sqliteTable("registrations", {

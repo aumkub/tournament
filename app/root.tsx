@@ -40,7 +40,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 	let backendUrl = "/portal";
 	if (session.role !== "super_admin" && session.tournamentId) {
-		const t = await env.DB.prepare("SELECT slug FROM tournaments WHERE id = ?")
+		const t = await env.DB.prepare("SELECT slug FROM tournaments WHERE id = ? AND deleted_at IS NULL")
 			.bind(session.tournamentId)
 			.first();
 		if (t) {

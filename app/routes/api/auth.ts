@@ -84,7 +84,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
 	// Look up tournament by slug
 	const tournament = await env.DB.prepare(
-		"SELECT * FROM tournaments WHERE slug = ?",
+		"SELECT * FROM tournaments WHERE slug = ? AND deleted_at IS NULL",
 	)
 		.bind(slug)
 		.first();

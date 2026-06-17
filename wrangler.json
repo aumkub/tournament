@@ -12,7 +12,8 @@
 		{
 			"binding": "DB",
 			"database_name": "tournament-db",
-			"database_id": "87915c72-a792-4cdf-808a-c08458f9a513"
+			"database_id": "87915c72-a792-4cdf-808a-c08458f9a513",
+			"remote": true
 		}
 	],
 	"r2_buckets": [
@@ -20,13 +21,19 @@
 			"binding": "BUCKET",
 			"bucket_name": "tournament-uploads",
 			"preview_bucket_name": "tournament-uploads-preview"
+		},
+		{
+			"binding": "BUCKET_REMOTE",
+			"bucket_name": "tournament-uploads",
+			"remote": true
 		}
 	],
 	"kv_namespaces": [
 		{
 			"binding": "SESSIONS",
 			"id": "7715752a30834365a537e6f8df311761",
-			"preview_id": "1328c75c3f854e7da43a1420c33db0b2"
+			"preview_id": "1328c75c3f854e7da43a1420c33db0b2",
+			"remote": true
 		}
 	],
 	"durable_objects": {
