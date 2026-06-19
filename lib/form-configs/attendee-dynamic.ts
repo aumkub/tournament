@@ -78,7 +78,8 @@ export const attendeeDynamicConfig: FormConfig = {
 					label: { th: "รู้จักงานนี้จาก", en: "How did you hear about this event?" },
 					required: true,
 					options: [
-						{ value: "facebook", label: { th: "Facebook", en: "Facebook" } },
+						{ value: "facebook_thailand_pga", label: { th: "เพจ Thailand PGA", en: "Thailand PGA Page" } },
+						{ value: "facebook_all_thailand_golf_tour", label: { th: "เพจ all Thailand Golf Tour", en: "all Thailand Golf Tour Page" } },
 						{ value: "instagram", label: { th: "Instagram", en: "Instagram" } },
 						{ value: "line", label: { th: "Line", en: "Line" } },
 						{ value: "acquaintance", label: { th: "คนรู้จัก", en: "Acquaintance" } },

@@ -16,7 +16,13 @@ export function Header() {
 	const authenticated = rootData?.authenticated ?? false;
 	const role = (rootData as any)?.role ?? null;
 	const backendUrl = (rootData as any)?.backendUrl ?? "/portal";
-	const isAdminPlus = role === "admin" || role === "super_admin";
+	const siteSettings = (rootData as any)?.siteSettings;
+	const isSuperAdmin = role === "super_admin";
+	const isAdminPlus = role === "admin" || isSuperAdmin;
+	const headerBrand = siteSettings?.headerBrand ?? "all Thailand";
+	const headerLogoLetter = siteSettings?.headerLogoLetter ?? "T";
+	const headerMode = siteSettings?.headerMode ?? "text";
+	const headerImageUrl = siteSettings?.headerImageUrl ?? null;
 
 	const handleLogout = async () => {
 		await fetch("/api/auth/logout", { method: "POST" });
@@ -28,16 +34,31 @@ export function Header() {
 			<div className="max-w-[1200px] mx-auto px-lg h-14 flex items-center justify-between">
 				{/* Logo */}
 				<a href="/" className="flex items-center gap-2 text-ink no-underline flex-shrink-0">
-					<span className="inline-flex items-center justify-center w-7 h-7 bg-primary text-white text-sm font-bold rounded-md leading-none">
-						T
-					</span>
-					<span className="text-base font-semibold text-ink">all Thailand</span>
+					{headerMode === "image" && headerImageUrl ? (
+						<img
+							src={headerImageUrl}
+							alt={headerBrand}
+							className="h-8 max-w-[220px] w-auto object-contain"
+						/>
+					) : (
+						<>
+							<span className="inline-flex items-center justify-center w-7 h-7 bg-primary text-white text-sm font-bold rounded-md leading-none">
+								{headerLogoLetter}
+							</span>
+							<span className="text-base font-semibold text-ink">{headerBrand}</span>
+						</>
+					)}
 				</a>
 
 				{/* Desktop nav — hidden on mobile */}
 				<nav className="hidden sm:flex items-center gap-xs">
 					<a href="/" className={navLinkClass}>หน้าหลัก</a>
 
+					{authenticated && isSuperAdmin && (
+						<a href="/portal/site-settings" className={navLinkClass}>
+							<IconSettings size={14} /> ตั้งค่าเว็บไซต์
+						</a>
+					)}
 					{authenticated && isAdminPlus && (
 						<a href={backendUrl} className={navLinkClass}>
 							ผู้ดูแลระบบ
@@ -73,6 +94,15 @@ export function Header() {
 					>
 						หน้าหลัก
 					</a>
+					{authenticated && isSuperAdmin && (
+						<a
+							href="/portal/site-settings"
+							onClick={() => setMenuOpen(false)}
+							className="text-sm font-medium text-body py-2.5 px-3 rounded-md flex items-center gap-2 no-underline hover:bg-surface-soft"
+						>
+							<IconSettings size={15} /> ตั้งค่าเว็บไซต์
+						</a>
+					)}
 					{authenticated && isAdminPlus && (
 						<a
 							href={backendUrl}

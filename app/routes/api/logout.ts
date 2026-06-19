@@ -1,5 +1,5 @@
 import type { Route } from "./+types/api/logout";
-import { parseCookie, destroySession } from "../../../lib/kv-session";
+import { parseCookie, destroySession, sessionCookieHeader } from "../../../lib/kv-session";
 
 export async function action({ request, context }: Route.ActionArgs) {
 	const env = context.cloudflare.env;
@@ -12,7 +12,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 	return new Response(JSON.stringify({ ok: true }), {
 		status: 200,
 		headers: {
-			"Set-Cookie": `session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`,
+			"Set-Cookie": sessionCookieHeader("", 0, request),
 			"Content-Type": "application/json",
 		},
 	});

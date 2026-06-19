@@ -5,6 +5,7 @@ import { AttendeeForm } from "../../../components/forms/AttendeeForm";
 import { DynamicMultiStepForm } from "../../../components/forms/DynamicMultiStepForm";
 import { IconClock, IconCamera } from "../../../components/ui/icons";
 import { FORM_CONFIGS, getFormConfigBySlug } from "../../../lib/form-configs/index";
+import { resolveFormTypeLabel } from "../../../lib/form-labels";
 import type { FormConfig } from "../../../types/form-config";
 
 type Lang = "th" | "en";
@@ -66,6 +67,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 		const configMatch = getFormConfigBySlug(type!);
 		if (configMatch) formId = configMatch.id;
 	}
+	if (!formId && type === ((tournament.competitor_url as string) || "competitor") && tournament.competitor_form_id) {
+		formId = tournament.competitor_form_id as string;
+	}
+	if (!formId && type === ((tournament.attendee_url as string) || "attendee") && tournament.attendee_form_id) {
+		formId = tournament.attendee_form_id as string;
+	}
 
 	const testMode = !!(tournament.test_mode as number | boolean);
 
@@ -75,7 +82,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 		return {
 			slug,
 			type: formId,
-			typeLabel: formConfig.label.th,
+			typeLabelTh: resolveFormTypeLabel(tournament, formId, "th"),
+			typeLabelEn: resolveFormTypeLabel(tournament, formId, "en"),
 			tournamentName: tournament.name as string,
 			coverUrl: tournament.photo_url ? `/api/file?key=${encodeURIComponent(tournament.photo_url as string)}` : null,
 			registrationOpen: tournament.registration_open_at as number,
@@ -109,7 +117,13 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 	return {
 		slug,
 		type: registrationType,
-		typeLabel: customTitle || (registrationType === "competitor" ? "ผู้เข้าแข่งขัน" : "ผู้เข้าร่วมงาน"),
+		typeLabelTh:
+			customTitle || (registrationType === "competitor" ? "ผู้เข้าแข่งขัน" : "ผู้เข้าร่วมงาน"),
+		typeLabelEn:
+			(registrationType === "competitor"
+				? (tournament.competitor_title_en as string | null)
+				: (tournament.attendee_title_en as string | null)) ||
+			(registrationType === "competitor" ? "Competitor" : "Attendee"),
 		tournamentName: tournament.name as string,
 		coverUrl: tournament.photo_url ? `/api/file?key=${encodeURIComponent(tournament.photo_url as string)}` : null,
 		registrationOpen: tournament.registration_open_at as number,
@@ -121,7 +135,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
 export function meta({ data }: Route.MetaArgs) {
 	return [
-		{ title: `${data?.tournamentName || "Tournament"} — ${data?.typeLabel || "ลงทะเบียน"}` },
+		{ title: `${data?.tournamentName || "Tournament"} — ${data?.typeLabelTh || "ลงทะเบียน"}` },
 	];
 }
 
@@ -143,7 +157,7 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 	};
 	const isOpen = now >= loaderData.registrationOpen && now <= loaderData.registrationClose;
 	const isCompetitor = loaderData.type === "competitor";
-	const typeLabel = loaderData.typeLabel;
+	const typeLabel = lang === "en" ? loaderData.typeLabelEn : loaderData.typeLabelTh;
 
 	return (
 		<div>
@@ -198,7 +212,7 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 						color: "white",
 						backdropFilter: "blur(4px)",
 					}}>
-						{loaderData.typeLabel}
+						{lang ? typeLabel : loaderData.typeLabelTh}
 					</span>
 				</div>
 			</div>
@@ -254,13 +268,13 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 							config={loaderData.formConfig as any}
 							slug={loaderData.slug}
 							tournamentName={loaderData.tournamentName}
-							typeLabel={loaderData.typeLabel}
+							typeLabel={typeLabel}
 							lang={lang}
 							testMode={loaderData.testMode}
 						  />
 						: isCompetitor
-							? <CompetitorForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={loaderData.typeLabel} />
-							: <AttendeeForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={loaderData.typeLabel} />
+							? <CompetitorForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={typeLabel} />
+							: <AttendeeForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={typeLabel} />
 					}
 					{/* Floating language switch */}
 					<button

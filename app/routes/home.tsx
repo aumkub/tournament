@@ -1,19 +1,24 @@
 import type { Route } from "./+types/home";
 import { IconCamera } from "../../components/ui/icons";
 import { FORM_CONFIGS } from "../../lib/form-configs/index";
+import { getSiteSettings } from "../../lib/site-settings";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ data }: Route.MetaArgs) {
 	return [
-		{ title: "all Thailand Registration System" },
-		{ name: "description", content: "ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน" },
+		{ title: data?.siteSettings?.metaTitle ?? "all Thailand Registration System" },
+		{
+			name: "description",
+			content: data?.siteSettings?.metaDescription ?? "ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน",
+		},
 	];
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
+	const siteSettings = await getSiteSettings(env.DB);
 
 	const results = await env.DB.prepare(
-		"SELECT id, name, slug, photo_url, competitor_url, attendee_url, competitor_title, attendee_title, competitor_title_en, attendee_title_en, form_urls_json, registration_open_at, registration_close_at FROM tournaments WHERE deleted_at IS NULL ORDER BY created_at DESC",
+		"SELECT id, name, slug, photo_url, competitor_url, attendee_url, competitor_title, attendee_title, competitor_form_id, attendee_form_id, form_urls_json, registration_open_at, registration_close_at FROM tournaments WHERE deleted_at IS NULL ORDER BY created_at DESC",
 	).all();
 
 	const tournaments = results.results.map((t: any) => ({
@@ -21,35 +26,78 @@ export async function loader({ context }: Route.LoaderArgs) {
 		coverUrl: t.photo_url ? `/api/file?key=${encodeURIComponent(t.photo_url)}` : null,
 	}));
 
-	return { tournaments };
+	return { tournaments, siteSettings };
+}
+
+function thaiFormLabel(
+	title: string | null | undefined,
+	formId: string | null | undefined,
+	fallback: string,
+): string {
+	if (title?.trim()) return title.trim();
+	if (formId && FORM_CONFIGS[formId]?.label.th) return FORM_CONFIGS[formId].label.th;
+	return fallback;
+}
+
+function buildRegistrationButtons(t: any) {
+	const resolveUrl = (val: string | null, fallback: string) => {
+		if (!val) return `/${t.slug}/register/${fallback}`;
+		if (val.startsWith("http://") || val.startsWith("https://")) return val;
+		return `/${t.slug}/register/${val}`;
+	};
+	const isExternal = (val: string | null) =>
+		!!val && (val.startsWith("http://") || val.startsWith("https://"));
+
+	let formUrls: Record<string, string> = {};
+	try {
+		formUrls = JSON.parse(t.form_urls_json || "{}");
+	} catch {
+		/* ignore */
+	}
+
+	const formUrlEntries = Object.entries(formUrls);
+	if (formUrlEntries.length > 0) {
+		return formUrlEntries.map(([formId, urlSlug], i) => ({
+			href: `/${t.slug}/register/${urlSlug}`,
+			label: `ลงทะเบียน ${thaiFormLabel(
+				formId === t.competitor_form_id
+					? t.competitor_title
+					: formId === t.attendee_form_id
+						? t.attendee_title
+						: null,
+				formId,
+				formId,
+			)}`,
+			primary: i === 0,
+			external: false,
+		}));
+	}
+
+	const competitorFallback =
+		(t.competitor_form_id && FORM_CONFIGS[t.competitor_form_id]?.defaultUrlSlug) || "competitor";
+	const attendeeFallback =
+		(t.attendee_form_id && FORM_CONFIGS[t.attendee_form_id]?.defaultUrlSlug) || "attendee";
+
+	return [
+		{
+			href: resolveUrl(t.competitor_url, competitorFallback),
+			label: `ลงทะเบียน ${thaiFormLabel(t.competitor_title, t.competitor_form_id, "ผู้เข้าแข่งขัน")}`,
+			primary: true,
+			external: isExternal(t.competitor_url),
+		},
+		{
+			href: resolveUrl(t.attendee_url, attendeeFallback),
+			label: `ลงทะเบียน ${thaiFormLabel(t.attendee_title, t.attendee_form_id, "ผู้ชม")}`,
+			primary: false,
+			external: isExternal(t.attendee_url),
+		},
+	];
 }
 
 function TournamentCard({ t }: { t: any }) {
 	const now = Date.now();
 	const isOpen = now >= t.registration_open_at && now <= t.registration_close_at;
-
-	// Parse dynamic form URLs
-	let formUrls: Record<string, string> = {};
-	try { formUrls = JSON.parse(t.form_urls_json || "{}"); } catch { /* ignore */ }
-	const dynamicForms = Object.entries(formUrls).map(([formId, urlSlug]) => {
-		const cfg = FORM_CONFIGS[formId];
-		return { formId, urlSlug: urlSlug as string, label: cfg?.label.th || formId };
-	});
-	const hasDynamicForms = dynamicForms.length > 0;
-
-	const resolveUrl = (slug: string, val: string | null, fallback: string) => {
-		if (!val) return `/${slug}/register/${fallback}`;
-		if (val.startsWith("http://") || val.startsWith("https://")) return val;
-		return `/${slug}/register/${val}`;
-	};
-	const isExternal = (val: string | null) => !!val && (val.startsWith("http://") || val.startsWith("https://"));
-
-	const competitorHref = resolveUrl(t.slug, t.competitor_url, "competitor");
-	const attendeeHref = resolveUrl(t.slug, t.attendee_url, "attendee");
-	const externalCompetitor = isExternal(t.competitor_url);
-	const externalAttendee = isExternal(t.attendee_url);
-	const competitorLabel = [t.competitor_title, t.competitor_title_en].filter(Boolean).join(" / ") || "ผู้เข้าแข่งขัน";
-	const attendeeLabel = [t.attendee_title, t.attendee_title_en].filter(Boolean).join(" / ") || "ผู้เข้าร่วมงาน";
+	const registrationButtons = buildRegistrationButtons(t);
 
 	return (
 		<div className="card flex flex-col overflow-hidden !p-0">
@@ -60,7 +108,7 @@ function TournamentCard({ t }: { t: any }) {
 				) : (
 					<div className="flex flex-col items-center justify-center gap-1 w-full h-full" style={{ color: "var(--color-muted-soft)" }}>
 						<IconCamera size={32} color="var(--color-muted-soft)" />
-						<span className="text-xs">No cover photo</span>
+						<span className="text-xs">ไม่มีรูปปก</span>
 					</div>
 				)}
 				{isOpen && (
@@ -87,38 +135,19 @@ function TournamentCard({ t }: { t: any }) {
 					</p>
 				)}
 
-				{hasDynamicForms ? (
-					<div className="flex flex-wrap gap-sm mt-md">
-						{dynamicForms.map((f, i) => (
-							<a
-								key={f.formId}
-								href={`/${t.slug}/register/${f.urlSlug}`}
-								className={`btn ${i === 0 ? "btn-primary" : "btn-secondary"} text-base min-w-[120px] flex-1`}
-							>
-								ลงทะเบียน{f.label}
-							</a>
-						))}
-					</div>
-				) : (
-					<div className="flex gap-sm mt-md">
+				<div className="flex flex-col md:flex-row flex-wrap gap-sm mt-md">
+					{registrationButtons.map((btn) => (
 						<a
-							href={competitorHref}
-							className="btn btn-primary text-base flex-1"
-							target={externalCompetitor ? "_blank" : undefined}
-							rel={externalCompetitor ? "noopener noreferrer" : undefined}
+							key={btn.href}
+							href={btn.href}
+							className={`btn ${btn.primary ? "btn-primary" : "btn-secondary"} text-base min-w-[120px] flex-1`}
+							target={btn.external ? "_blank" : undefined}
+							rel={btn.external ? "noopener noreferrer" : undefined}
 						>
-							ลงทะเบียน{competitorLabel}
+							{btn.label}
 						</a>
-						<a
-							href={attendeeHref}
-							className="btn btn-secondary text-base flex-1"
-							target={externalAttendee ? "_blank" : undefined}
-							rel={externalAttendee ? "noopener noreferrer" : undefined}
-						>
-							ลงทะเบียน{attendeeLabel}
-						</a>
-					</div>
-				)}
+					))}
+				</div>
 			</div>
 		</div>
 	);
@@ -126,18 +155,23 @@ function TournamentCard({ t }: { t: any }) {
 
 export default function Home({ loaderData }: Route.ComponentProps) {
 	const tournaments = loaderData.tournaments || [];
+	const settings = loaderData.siteSettings;
+	const descriptionLines = settings.homeDescription.split("\n").filter(Boolean);
 
 	return (
 		<div className="min-h-screen">
 			{/* Hero */}
 			<div className="max-w-[800px] mx-auto px-lg py-xxl text-center">
 				<h1 className="!text-[clamp(32px,6vw,40px)] mb-md" style={{ letterSpacing: "-1.5px" }}>
-					Registration System
+					{settings.homeTitle}
 				</h1>
 				<p className="text-[clamp(14px,2.5vw,18px)] mx-auto leading-relaxed max-w-[600px]" style={{ color: "var(--color-body)" }}>
-					ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน
-					<br />
-					ลงทะเบียน &rarr; รับ QR Code &rarr; เช็คอินวันงาน
+					{descriptionLines.map((line, i) => (
+						<span key={i}>
+							{i > 0 && <br />}
+							{line}
+						</span>
+					))}
 				</p>
 			</div>
 
@@ -165,10 +199,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				background: "var(--color-surface-dark)",
 				color: "var(--color-on-dark-soft)"
 			}}>
-				<p>all Thailand Registration &amp; Check-in System</p>
-				<p className="text-smmt-1" style={{ color: "var(--color-on-dark-soft)" }}>
-					Built with Cloudflare Workers &bull; React Router 7
-				</p>
+				<p>{settings.footerLine1}</p>
+				{settings.footerLine2 && (
+					<p className="text-smmt-1" style={{ color: "var(--color-on-dark-soft)" }}>
+						{settings.footerLine2}
+					</p>
+				)}
 			</footer>
 		</div>
 	);

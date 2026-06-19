@@ -179,6 +179,21 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			if (form.passwords.admin) fd.append("password_admin", form.passwords.admin);
 			if (form.passwords.super_admin) fd.append("password_super_admin", form.passwords.super_admin);
 
+			const formUrls: Record<string, string> = {};
+			if (competitorFormId) {
+				formUrls[competitorFormId] =
+					form.competitor_url ||
+					FORM_CONFIGS[competitorFormId]?.defaultUrlSlug ||
+					"competitor";
+			}
+			if (attendeeFormId) {
+				formUrls[attendeeFormId] =
+					form.attendee_url ||
+					FORM_CONFIGS[attendeeFormId]?.defaultUrlSlug ||
+					"attendee";
+			}
+			fd.append("form_urls_json", JSON.stringify(formUrls));
+
 			const res = await fetch("/api/admin/" + t.slug + "/tournament", { method: "PUT", body: fd });
 			if (!res.ok) {
 				const data = await res.json();
@@ -199,7 +214,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 	const tabs: { id: Tab; label: string; icon: any }[] = [
 		{ id: "general", label: "ทั่วไป", icon: <IconSettings size={16} /> },
 		{ id: "schedule", label: "วันเวลา", icon: <IconCalendar size={16} /> },
-		{ id: "registration", label: "ลงทะเบียน & ฟอร์ม", icon: <IconLink size={16} /> },
+		{ id: "registration", label: "ลงทะเบียนและฟอร์ม", icon: <IconLink size={16} /> },
 		{ id: "passwords", label: "รหัสผ่าน", icon: <IconKey size={16} /> },
 		{ id: "email", label: "อีเมล", icon: <IconMail size={16} /> },
 		{ id: "reset", label: "ล้างค่า", icon: <IconAlertTriangle size={16} /> },
@@ -269,7 +284,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 		<div style={{ maxWidth: 800, margin: "0 auto", padding: "var(--spacing-lg)" }}>
 			{/* Header */}
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-lg)" }}>
-				<h1 style={{ fontSize: 28 }}>Settings</h1>
+				<h1 style={{ fontSize: 28 }}>ตั้งค่า</h1>
 				<button className="btn btn-primary" onClick={handleSave} disabled={saving}>
 					<IconSave size={16} /> {saving ? "กำลังบันทึก..." : "บันทึก"}
 				</button>

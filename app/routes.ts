@@ -34,9 +34,11 @@ export default [
 	route("api/admin/:slug/uncheckin", "routes/api/admin/uncheckin.ts"),
 	route("api/admin/:slug/clear-registrations", "routes/api/admin/clear-registrations.ts"),
 	route("api/admin/:slug/clear-checkins", "routes/api/admin/clear-checkins.ts"),
+	route("api/admin/site-settings", "routes/api/admin/site-settings.ts"),
 
 	// Admin pages
 	route("portal", "routes/admin/index.tsx"),
+	route("portal/site-settings", "routes/admin/site-settings.tsx"),
 	route("portal/:slug", "routes/admin/dashboard.tsx"),
 	route("portal/:slug/settings", "routes/admin/settings.tsx"),
 	route("portal/:slug/checkin", "routes/admin/checkin.tsx"),

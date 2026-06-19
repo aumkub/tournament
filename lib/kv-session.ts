@@ -44,6 +44,25 @@ export function parseCookie(cookieHeader: string | null): string | null {
 	return null;
 }
 
+/** Session cookie — Secure only over HTTPS (localhost HTTP dev must omit it). */
+export function sessionCookieHeader(
+	token: string,
+	maxAge: number,
+	request: Request,
+): string {
+	const secure = new URL(request.url).protocol === "https:";
+	return [
+		`session=${token}`,
+		"HttpOnly",
+		secure ? "Secure" : null,
+		"SameSite=Strict",
+		"Path=/",
+		`Max-Age=${maxAge}`,
+	]
+		.filter(Boolean)
+		.join("; ");
+}
+
 export function hasRole(session: SessionData | null, minimum: Role): boolean {
 	if (!session) return false;
 	const hierarchy: Role[] = ["assistant", "admin", "super_admin"];

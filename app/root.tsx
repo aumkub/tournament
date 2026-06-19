@@ -12,6 +12,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { parseCookie, verifySession } from "../lib/kv-session";
+import { getSiteSettings } from "../lib/site-settings";
 import { Header } from "../components/ui/header";
 
 export const id = "root";
@@ -31,12 +32,13 @@ export const links: Route.LinksFunction = () => [
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
+	const siteSettings = await getSiteSettings(env.DB);
 	const token = parseCookie(request.headers.get("Cookie"));
 
-	if (!token) return { authenticated: false, role: null, backendUrl: null };
+	if (!token) return { authenticated: false, role: null, backendUrl: null, siteSettings };
 
 	const session = await verifySession(env.SESSIONS, token);
-	if (!session) return { authenticated: false, role: null, backendUrl: null };
+	if (!session) return { authenticated: false, role: null, backendUrl: null, siteSettings };
 
 	let backendUrl = "/portal";
 	if (session.role !== "super_admin" && session.tournamentId) {
@@ -50,7 +52,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		}
 	}
 
-	return { authenticated: true, role: session.role, backendUrl };
+	return { authenticated: true, role: session.role, backendUrl, siteSettings };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {

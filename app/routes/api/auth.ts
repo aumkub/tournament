@@ -1,6 +1,6 @@
 import type { Route } from "./+types/api/auth";
 import { verifyPassword, parsePasswords } from "../../../lib/auth";
-import { createSession } from "../../../lib/kv-session";
+import { createSession, sessionCookieHeader } from "../../../lib/kv-session";
 import type { Role } from "../../../types/registration";
 
 const MAX_ATTEMPTS = 5;
@@ -130,7 +130,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 	return new Response(JSON.stringify({ role: matchedRole }), {
 		status: 200,
 		headers: {
-			"Set-Cookie": `session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800`,
+			"Set-Cookie": sessionCookieHeader(token, 28800, request),
 			"Content-Type": "application/json",
 		},
 	});

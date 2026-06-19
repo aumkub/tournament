@@ -34,6 +34,33 @@ export const tournaments = sqliteTable("tournaments", {
 	deleted_at: integer("deleted_at", { mode: "timestamp" }),
 });
 
+export const siteSettings = sqliteTable("site_settings", {
+	id: text("id").primaryKey().default("default"),
+	header_brand: text("header_brand").notNull().default("all Thailand"),
+	header_logo_letter: text("header_logo_letter").notNull().default("T"),
+	header_mode: text("header_mode").notNull().default("text"),
+	header_image_key: text("header_image_key"),
+	home_title: text("home_title").notNull().default("Registration System"),
+	home_description: text("home_description")
+		.notNull()
+		.default(
+			"ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน\nลงทะเบียน → รับ QR Code → เช็คอินวันงาน",
+		),
+	footer_line1: text("footer_line1")
+		.notNull()
+		.default("all Thailand Registration & Check-in System"),
+	footer_line2: text("footer_line2")
+		.notNull()
+		.default("Built with Cloudflare Workers • React Router 7"),
+	meta_title: text("meta_title").notNull().default("all Thailand Registration System"),
+	meta_description: text("meta_description")
+		.notNull()
+		.default("ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน"),
+	updated_at: integer("updated_at", { mode: "timestamp" })
+		.notNull()
+		.$defaultFn(() => new Date()),
+});
+
 export const registrations = sqliteTable("registrations", {
 	id: text("id")
 		.primaryKey()
