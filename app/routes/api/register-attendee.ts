@@ -1,5 +1,6 @@
 import type { Route } from "./+types/api/register-attendee";
 import { isRegistrationOpen, nowEpoch } from "../../../lib/utils";
+import { sendRegistrationEmail } from "../../../lib/registration-email";
 
 export async function action({ request, params, context }: Route.ActionArgs) {
 	const env = context.cloudflare.env;
@@ -71,11 +72,15 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		.run();
 
 	try {
-		await env.EMAIL_QUEUE.send({
-			registrationId: id,
-			tournamentId: tournament.id as string,
+		await sendRegistrationEmail(env, tournament, {
+			id,
+			type: "attendee",
+			email: body.email,
+			data_json: JSON.stringify(body.data),
 		});
-	} catch {}
+	} catch (err) {
+		console.error("Failed to send registration email:", err);
+	}
 
 	return Response.json({
 		id,

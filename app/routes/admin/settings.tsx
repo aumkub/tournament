@@ -96,6 +96,9 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 	});
 	const [activeEmailType, setActiveEmailType] = useState<string>("attendee");
 	const [emailView, setEmailView] = useState<"edit" | "preview">("edit");
+	const [testEmailAddress, setTestEmailAddress] = useState("");
+	const [testEmailSending, setTestEmailSending] = useState(false);
+	const [testEmailMessage, setTestEmailMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
 	const emailFormTypes = Object.keys(FORM_CONFIGS);
 
@@ -134,6 +137,38 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			return "<!DOCTYPE html><html lang=\"th\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body style=\"margin:0;padding:0;background:#f5f0e8;font-family:sans-serif;font-size:16px;line-height:1.7;\">" + rendered + "</body></html>";
 		};
 	}, [emailTemplates, t.name]);
+
+	const handleSendTestEmail = async (formType: string) => {
+		const to = testEmailAddress.trim();
+		if (!to) {
+			setTestEmailMessage({ ok: false, text: "กรุณาระบุอีเมลปลายทาง" });
+			return;
+		}
+
+		setTestEmailSending(true);
+		setTestEmailMessage(null);
+		try {
+			const templateHtml = emailTemplates[formType] || getDefaultEmailTemplate(formType);
+			const res = await fetch(`/api/admin/${t.slug}/test-email`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					to,
+					formType,
+					templateHtml,
+				}),
+			});
+			const data = await res.json() as { ok?: boolean; error?: string; message?: string };
+			if (!res.ok) {
+				throw new Error(data.error || "ส่งอีเมลไม่สำเร็จ");
+			}
+			setTestEmailMessage({ ok: true, text: data.message || `ส่งอีเมลทดสอบไปที่ ${to} แล้ว` });
+		} catch (err: any) {
+			setTestEmailMessage({ ok: false, text: err.message });
+		} finally {
+			setTestEmailSending(false);
+		}
+	};
 
 	const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -649,6 +684,42 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			{/* ── Tab: Email ────────────────────────────── */}
 			{activeTab === "email" && (
 				<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
+					<div className="card">
+						<h2 style={{ fontSize: 18, marginTop: 0, marginBottom: "var(--spacing-sm)" }}>ส่งอีเมลทดสอบ</h2>
+						<p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 0, marginBottom: "var(--spacing-md)" }}>
+							ส่งตัวอย่างอีเมลไปยังอีเมลที่ระบุผ่าน Cloudflare Email Service (ใช้เทมเพลตปัจจุบันในหน้านี้ ไม่ต้องบันทึกก่อน)
+						</p>
+						<div style={{ display: "flex", gap: "var(--spacing-sm)", flexWrap: "wrap", alignItems: "flex-end" }}>
+							<div style={{ flex: "1 1 240px" }}>
+								<label className="label">อีเมลปลายทาง</label>
+								<input
+									className="input input-bordered w-full"
+									type="email"
+									placeholder="you@example.com"
+									value={testEmailAddress}
+									onChange={(e) => setTestEmailAddress(e.target.value)}
+								/>
+							</div>
+						</div>
+						{testEmailMessage && (
+							<div
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 8,
+									padding: "var(--spacing-sm) var(--spacing-md)",
+									marginTop: "var(--spacing-md)",
+									background: testEmailMessage.ok ? "#f0fdf4" : "#fef2f2",
+									border: "1px solid " + (testEmailMessage.ok ? "var(--color-success)" : "var(--color-error)"),
+									borderRadius: "var(--radius-md)",
+									fontSize: 13,
+								}}
+							>
+								{testEmailMessage.ok ? <IconCheck size={14} color="var(--color-success)" /> : <IconX size={14} color="var(--color-error)" />}
+								{testEmailMessage.text}
+							</div>
+						)}
+					</div>
 					{emailFormTypes.map((type) => {
 						const label = EMAIL_TEMPLATE_LABELS[type] || { th: type, en: type };
 						const customHtml = emailTemplates[type] ?? "";
@@ -736,6 +807,19 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 												/>
 											</div>
 										)}
+
+										<div style={{ marginTop: "var(--spacing-md)", paddingTop: "var(--spacing-md)", borderTop: "1px solid var(--color-hairline-soft)" }}>
+											<button
+												className="btn btn-sm btn-primary"
+												onClick={() => handleSendTestEmail(type)}
+												disabled={testEmailSending || !testEmailAddress.trim()}
+											>
+												<IconMail size={14} /> {testEmailSending ? "กำลังส่ง..." : "ส่งอีเมลทดสอบ"}
+											</button>
+											<p style={{ fontSize: 12, color: "var(--color-muted)", marginTop: 8, marginBottom: 0 }}>
+												ส่งเทมเพลต {label.th} ไปที่ {testEmailAddress.trim() || "อีเมลด้านบน"}
+											</p>
+										</div>
 									</div>
 								)}
 							</div>

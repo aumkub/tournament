@@ -1,5 +1,6 @@
 import type { Route } from "./+types/api/register-competitor";
 import { isRegistrationOpen, nowEpoch } from "../../../lib/utils";
+import { sendRegistrationEmail } from "../../../lib/registration-email";
 
 export async function action({ request, params, context }: Route.ActionArgs) {
 	const env = context.cloudflare.env;
@@ -90,14 +91,15 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		)
 		.run();
 
-	// Enqueue email job
 	try {
-		await env.EMAIL_QUEUE.send({
-			registrationId: id,
-			tournamentId: tournament.id as string,
+		await sendRegistrationEmail(env, tournament, {
+			id,
+			type: "competitor",
+			email: body.email,
+			data_json: JSON.stringify(body.data),
 		});
-	} catch {
-		// Queue not available in local dev — continue
+	} catch (err) {
+		console.error("Failed to send registration email:", err);
 	}
 
 	return Response.json({

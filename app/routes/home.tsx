@@ -178,7 +178,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 			{/* Tournament List */}
 			<div className="max-w-[1000px] mx-auto px-lg pb-section">
 				<h2 className="!text-2xl mb-xl text-center">
-					ทัวร์นาเมนต์ที่เปิดรับสมัคร
+					Upcoming Events
 				</h2>
 
 				{tournaments.length === 0 ? (

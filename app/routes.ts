@@ -34,6 +34,7 @@ export default [
 	route("api/admin/:slug/uncheckin", "routes/api/admin/uncheckin.ts"),
 	route("api/admin/:slug/clear-registrations", "routes/api/admin/clear-registrations.ts"),
 	route("api/admin/:slug/clear-checkins", "routes/api/admin/clear-checkins.ts"),
+	route("api/admin/:slug/test-email", "routes/api/admin/test-email.ts"),
 	route("api/admin/site-settings", "routes/api/admin/site-settings.ts"),
 
 	// Admin pages

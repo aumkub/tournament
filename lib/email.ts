@@ -1,13 +1,14 @@
-import type { Env } from "../../types/bindings";
-
-interface EmailPayload {
-	to: string;
+interface SendEmailOptions {
+	to: string | string[];
+	from?: string | { email: string; name?: string };
 	subject: string;
 	html: string;
+	text?: string;
+	replyTo?: string;
 }
 
-export async function enqueueEmail(env: Env, payload: { registrationId: string; tournamentId: string }): Promise<void> {
-	await env.EMAIL_QUEUE.send(payload);
+interface SendEmailResult {
+	messageId?: string;
 }
 
 export function renderEmailTemplate(
@@ -23,8 +24,6 @@ export function renderEmailTemplate(
 
 /**
  * Wraps a rendered email body HTML into a full email document.
- * The body content is what the user edits in settings.
- * This wrapper adds proper email HTML structure.
  */
 export function wrapEmailBody(bodyHtml: string): string {
 	return `<!DOCTYPE html>
@@ -40,9 +39,70 @@ ${bodyHtml}
 </html>`;
 }
 
+export function htmlToPlainText(html: string): string {
+	return html
+		.replace(/<style[\s\S]*?<\/style>/gi, "")
+		.replace(/<script[\s\S]*?<\/script>/gi, "")
+		.replace(/<br\s*\/?>/gi, "\n")
+		.replace(/<\/p>/gi, "\n\n")
+		.replace(/<[^>]+>/g, "")
+		.replace(/&nbsp;/g, " ")
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/\n{3,}/g, "\n\n")
+		.trim();
+}
+
+function resolveFromAddress(env: Env): string {
+	return env.EMAIL_FROM || "welcome@gooddrive.golf";
+}
+
+function resolveFromName(env: Env, override?: string): string {
+	return override || env.EMAIL_FROM_NAME || "GoodDrive Golf";
+}
+
+export async function sendEmail(
+	env: Env,
+	options: {
+		to: string;
+		subject: string;
+		html: string;
+		text?: string;
+		fromName?: string;
+	},
+): Promise<SendEmailResult> {
+	if (!env.EMAIL) {
+		throw new Error("Email binding not configured");
+	}
+
+	const payload: SendEmailOptions = {
+		to: options.to,
+		from: {
+			email: resolveFromAddress(env),
+			name: resolveFromName(env, options.fromName),
+		},
+		subject: options.subject,
+		html: options.html,
+		text: options.text ?? htmlToPlainText(options.html),
+	};
+
+	const response = await (env.EMAIL as SendEmail & {
+		send(message: SendEmailOptions): Promise<SendEmailResult>;
+	}).send(payload);
+
+	return response ?? {};
+}
+
+export async function enqueueEmail(
+	env: Env,
+	payload: { registrationId: string; tournamentId: string },
+): Promise<void> {
+	await env.EMAIL_QUEUE.send(payload);
+}
+
 /**
  * Default email body template — just the <body> content, NOT a full HTML document.
- * The wrapEmailBody() function will add the outer structure when sending.
  */
 export const DEFAULT_EMAIL_BODY = `
   <!-- Outer wrapper -->
