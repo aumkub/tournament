@@ -1,18 +1,18 @@
 import type { Route } from "./+types/admin/index";
 import { parseCookie, verifySession, hasRole } from "../../../lib/kv-session";
-import { useState, useEffect, useRef } from "react";
-import {
-	IconLock,
-	IconPlus,
-	IconX,
-	IconRotateCcw,
-} from "../../../components/ui/icons";
+import { getSiteSettings } from "../../../lib/site-settings";
+import { useState, useEffect } from "react";
+import { IconLock } from "../../../components/ui/icons";
 import type { Role } from "../../../types/registration";
+import { TurnstileWidget } from "../../../components/ui/TurnstileWidget";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
 	const token = parseCookie(request.headers.get("Cookie"));
 	const session = await verifySession(env.SESSIONS, token || "");
+	const siteSettings = await getSiteSettings(env.DB);
+	const isLocal = ["localhost", "127.0.0.1"].includes(new URL(request.url).hostname);
+	const turnstileSiteKey = isLocal ? null : (siteSettings.turnstileSiteKey || null);
 
 	const results = await env.DB.prepare(
 		`SELECT t.id, t.name, t.slug, t.photo_url, t.created_at,
@@ -27,25 +27,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		ORDER BY t.created_at DESC`,
 	).all();
 
-	let deletedTournaments: unknown[] = [];
-	if (session && hasRole(session, "super_admin")) {
-		const deleted = await env.DB.prepare(
-			`SELECT t.id, t.name, t.slug, t.photo_url, t.deleted_at,
-				t.registration_open_at, t.registration_close_at,
-				t.checkin_open_at, t.checkin_close_at,
-				COUNT(r.id) as registration_count,
-				SUM(CASE WHEN r.checked_in = 1 THEN 1 ELSE 0 END) as checkin_count
-			FROM tournaments t
-			LEFT JOIN registrations r ON r.tournament_id = t.id
-			WHERE t.deleted_at IS NOT NULL
-			GROUP BY t.id
-			ORDER BY t.deleted_at DESC`,
-		).all();
-		deletedTournaments = deleted.results;
+	if (!session) {
+		return { authenticated: false as const, role: null, tournamentId: null, tournaments: results.results, redirectSlug: null, turnstileSiteKey, isLocal };
 	}
 
-	if (!session) {
-		return { authenticated: false as const, role: null, tournamentId: null, tournaments: results.results, deletedTournaments: [], redirectSlug: null };
+	if (session.role === "super_admin") {
+		return { authenticated: true as const, role: session.role as Role, tournamentId: session.tournamentId, tournaments: results.results, redirectSlug: null, turnstileSiteKey, isLocal };
 	}
 
 	if (session.role === "assistant") {
@@ -55,9 +42,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			role: session.role as Role,
 			tournamentId: session.tournamentId,
 			tournaments: results.results,
-			deletedTournaments: [],
 			redirectSlug: t?.slug || null,
-
+			turnstileSiteKey,
+			isLocal,
 		};
 	}
 
@@ -66,9 +53,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		role: session.role as Role,
 		tournamentId: session.tournamentId,
 		tournaments: results.results,
-		deletedTournaments,
 		redirectSlug: null,
-
+		turnstileSiteKey,
+		isLocal,
 	};
 }
 
@@ -84,37 +71,10 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 	const [error, setError] = useState<string | null>(null);
 	const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
 	const [selectedSlug, setSelectedSlug] = useState("");
+	const [turnstileToken, setTurnstileToken] = useState("");
 	const tournaments = loaderData.tournaments as any[];
-	const deletedTournaments = (loaderData.deletedTournaments ?? []) as any[];
-	const [restoringId, setRestoringId] = useState<string | null>(null);
-	const [restoreError, setRestoreError] = useState<string | null>(null);
-
-	// Create tournament state
-	const createDialogRef = useRef<HTMLDialogElement>(null);
-	const [creating, setCreating] = useState(false);
-	const [createError, setCreateError] = useState<string | null>(null);
-	const [createForm, setCreateForm] = useState({
-		name: "",
-		slug: "",
-		password_assistant: "",
-		password_admin: "",
-		password_super_admin: "",
-		registration_open_at: "",
-		registration_close_at: "",
-		checkin_open_at: "",
-		checkin_close_at: "",
-	});
-
-	// Auto-suggest slug from name
-	useEffect(() => {
-		const slug = createForm.name
-			.toLowerCase()
-			.replace(/[^a-z0-9\s-]/g, "")
-			.replace(/\s+/g, "-")
-			.replace(/-+/g, "-")
-			.slice(0, 60);
-		setCreateForm((prev) => ({ ...prev, slug }));
-	}, [createForm.name]);
+	const turnstileSiteKey = loaderData.turnstileSiteKey as string | null;
+	const isLocal = (loaderData as any).isLocal as boolean;
 
 	useEffect(() => {
 		if (!selectedSlug && tournaments.length > 0) {
@@ -123,74 +83,21 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 	}, [tournaments, selectedSlug]);
 
 	useEffect(() => {
-		if (loaderData.authenticated && loaderData.redirectSlug) {
+		if (!loaderData.authenticated || !loaderData.redirectSlug) return;
+		if (loaderData.redirectSlug === "$$site-settings$$") {
+			window.location.href = "/portal/site-settings";
+		} else {
 			window.location.href = `/portal/${loaderData.redirectSlug}/checkin`;
 		}
 	}, [loaderData.authenticated, loaderData.redirectSlug]);
-
-
-	const handleCreate = async () => {
-		if (!createForm.name.trim()) {
-			setCreateError("กรุณาใส่ชื่อรายการ");
-			return;
-		}
-		if (!createForm.password_super_admin.trim()) {
-			setCreateError("กรุณาตั้งรหัสผ่าน Super Admin");
-			return;
-		}
-		if (!createForm.registration_open_at || !createForm.registration_close_at) {
-			setCreateError("กรุณากำหนดช่วงเวลาลงทะเบียน");
-			return;
-		}
-		if (!createForm.checkin_open_at || !createForm.checkin_close_at) {
-			setCreateError("กรุณากำหนดช่วงเวลาเช็คอิน");
-			return;
-		}
-
-		setCreating(true);
-		setCreateError(null);
-
-		try {
-			const res = await fetch("/api/admin/tournaments", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					name: createForm.name,
-					slug: createForm.slug || undefined,
-					registration_open_at: new Date(createForm.registration_open_at).getTime(),
-					registration_close_at: new Date(createForm.registration_close_at).getTime(),
-					checkin_open_at: new Date(createForm.checkin_open_at).getTime(),
-					checkin_close_at: new Date(createForm.checkin_close_at).getTime(),
-					passwords: {
-						assistant: createForm.password_assistant || undefined,
-						admin: createForm.password_admin || undefined,
-						super_admin: createForm.password_super_admin,
-					},
-				}),
-			});
-
-			if (!res.ok) {
-				const data = await res.json();
-				throw new Error(data.error || "ไม่สามารถสร้างรายการได้");
-			}
-
-			const data = await res.json();
-			window.location.href = `/portal/${data.slug}/settings`;
-		} catch (err: any) {
-			setCreateError(err.message);
-		} finally {
-			setCreating(false);
-		}
-	};
 
 	// ─── Login view ──────────────────────────────
 	if (!loaderData.authenticated) {
 		const handleLogin = async () => {
 			if (!password) { setError("กรุณาใส่รหัสผ่าน"); return; }
 			if (!selectedSlug) { setError("กรุณาเลือกรายการ"); return; }
-
-			// Honeypot — bots fill hidden field, humans don't
 			if (honeypot) return;
+			if (turnstileSiteKey && !turnstileToken) { setError("กรุณายืนยัน Turnstile ก่อน"); return; }
 
 			setAuthenticating(true);
 			setError(null);
@@ -199,9 +106,9 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 				const res = await fetch(`/api/auth/${selectedSlug}`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ password, website: honeypot || undefined }),
+					body: JSON.stringify({ password, website: honeypot || undefined, turnstileToken: turnstileToken || undefined }),
 				});
-				const data = await res.json();
+				const data = await res.json() as any;
 				if (!res.ok) {
 					if (typeof data.attemptsLeft === "number") setAttemptsLeft(data.attemptsLeft);
 					throw new Error(data.error || "รหัสผ่านไม่ถูกต้อง");
@@ -209,6 +116,8 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 				setAttemptsLeft(null);
 				if (data.role === "assistant") {
 					window.location.href = `/portal/${selectedSlug}/checkin`;
+				} else if (data.role === "super_admin") {
+					window.location.href = "/portal/site-settings";
 				} else {
 					window.location.reload();
 				}
@@ -219,6 +128,28 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 			}
 		};
 
+		const handleDevLogin = async (role: "admin" | "assistant" | "super_admin") => {
+				if (!selectedSlug) { setError("กรุณาเลือกรายการก่อน"); return; }
+				setAuthenticating(true);
+				setError(null);
+				try {
+					const res = await fetch(`/api/auth/${selectedSlug}`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ password: "", devBypass: role }),
+					});
+					const data = await res.json() as any;
+					if (!res.ok) throw new Error(data.error || "failed");
+					if (role === "assistant") window.location.href = `/portal/${selectedSlug}/checkin`;
+					else if (role === "super_admin") window.location.href = "/portal/site-settings";
+					else window.location.reload();
+				} catch (err: any) {
+					setError(err.message);
+				} finally {
+					setAuthenticating(false);
+				}
+			};
+
 		return (
 			<div className="max-w-[400px] mx-auto px-lg py-xl">
 				<div className="card">
@@ -227,13 +158,13 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						<h2 className="!text-[20px] m-0 font-semibold">เข้าสู่ระบบ Admin</h2>
 					</div>
 
-					{/* Honeypot — visually hidden, bots fill this */}
+					{/* Honeypot */}
 					<div style={{ position: "absolute", left: "-9999px", opacity: 0, pointerEvents: "none" }} aria-hidden="true">
 						<input tabIndex={-1} autoComplete="off" type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
 					</div>
 
 					{error && (
-						<div className="p-sm p-md bg-[#fef2f2] border border-error rounded-md text-error text-sm mb-md">
+						<div className="px-md py-sm bg-[#fef2f2] border border-error rounded-md text-error text-sm mb-md">
 							{error}
 							{attemptsLeft !== null && attemptsLeft > 0 && (
 								<div className="mt-1 font-medium">เหลืออีก {attemptsLeft} ครั้ง ก่อนถูกล็อก</div>
@@ -260,17 +191,49 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						<input className="input w-full" type="password" placeholder="ใส่รหัสผ่าน..." value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} />
 					</div>
 
+					{turnstileSiteKey && (
+						<div className="mb-md flex justify-center">
+							<TurnstileWidget
+								siteKey={turnstileSiteKey}
+								onToken={setTurnstileToken}
+								onExpire={() => setTurnstileToken("")}
+							/>
+						</div>
+					)}
+
 					<button className="btn btn-primary w-full" onClick={handleLogin} disabled={authenticating || tournaments.length === 0}>
 						{authenticating ? "กำลังตรวจสอบ..." : "เข้าสู่ระบบ"}
 					</button>
+
+					{isLocal && (
+						<div style={{ marginTop: "var(--spacing-lg)", paddingTop: "var(--spacing-md)", borderTop: "1px solid var(--color-hairline-soft)" }}>
+							<p style={{ fontSize: 11, color: "var(--color-muted)", margin: "0 0 8px", textAlign: "center", fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
+								DEV BYPASS — localhost only
+							</p>
+							<div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+								{(["super_admin", "admin", "assistant"] as const).map((role) => (
+									<button
+										key={role}
+										className="btn btn-ghost"
+										style={{ fontSize: 13, justifyContent: "flex-start", fontFamily: "var(--font-mono)", gap: 8 }}
+										onClick={() => handleDevLogin(role)}
+										disabled={authenticating || !selectedSlug}
+									>
+										<span style={{ width: 10, height: 10, borderRadius: "50%", background: role === "super_admin" ? "#f59e0b" : role === "admin" ? "#3b82f6" : "#10b981", flexShrink: 0 }} />
+										{role}
+									</button>
+								))}
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 		);
 	}
 
-	// ─── Authenticated view ──────────────────────
+	// ─── Authenticated admin view ─────────────────
 	const role = loaderData.role as Role;
-	const isSuperAdmin = role === "super_admin";
+	const sessionTournament = tournaments.find((t: any) => t.id === loaderData.tournamentId);
 
 	const fmtDate = (ts: number | null) => {
 		if (!ts) return "—";
@@ -285,31 +248,7 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 		return "open";
 	};
 
-	const StatusDot = ({ status }: { status: "upcoming" | "open" | "closed" | "none" }) => {
-		if (status === "none") return null;
-		const colors = { open: "#16a34a", upcoming: "#ca8a04", closed: "#dc2626" };
-		return <span style={{ width: 7, height: 7, borderRadius: "50%", background: colors[status], display: "inline-block", flexShrink: 0 }} />;
-	};
-
-	const handleRestore = async (id: string) => {
-		setRestoringId(id);
-		setRestoreError(null);
-		try {
-			const res = await fetch(`/api/admin/tournaments/${id}/restore`, { method: "POST" });
-			const json = await res.json() as { ok?: boolean; error?: string };
-			if (!res.ok) {
-				setRestoreError(json.error ?? "กู้คืนไม่สำเร็จ");
-				setRestoringId(null);
-				return;
-			}
-			window.location.reload();
-		} catch {
-			setRestoreError("กู้คืนไม่สำเร็จ");
-			setRestoringId(null);
-		}
-	};
-
-	const TournamentCard = ({ t, href, deleted }: { t: any; href?: string; deleted?: boolean }) => {
+	const TournamentCard = ({ t, href }: { t: any; href: string }) => {
 		const coverUrl = t.photo_url ? `/api/file?key=${encodeURIComponent(t.photo_url)}` : null;
 		const regStatus = periodStatus(t.registration_open_at, t.registration_close_at);
 		const checkinStatus = periodStatus(t.checkin_open_at, t.checkin_close_at);
@@ -318,25 +257,17 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 		const statusLabel = { open: "เปิด", upcoming: "เร็วๆ นี้", closed: "ปิด", none: "" } as const;
 		const statusColor = { open: "#16a34a", upcoming: "#ca8a04", closed: "#9ca3af", none: "#9ca3af" } as const;
 
-		const cardInner = (
-			<>
-				{/* 16/9 cover with gradient overlay */}
-				<div className="relative w-full flex-shrink-0 overflow-hidden" style={{ aspectRatio: "16/9", background: "var(--color-surface-soft)" }}>
+		return (
+			<a href={href} className="card !p-0 flex flex-col overflow-hidden no-underline group transition-all hover:shadow-lg">
+				<div className="relative w-full shrink-0 overflow-hidden" style={{ aspectRatio: "16/9", background: "var(--color-surface-soft)" }}>
 					{coverUrl
-						? <img src={coverUrl} alt={t.name} className={`w-full h-full object-cover ${!deleted ? "transition-transform group-hover:scale-[1.02]" : "opacity-60 grayscale"}`} style={{ transitionDuration: "400ms" }} />
+						? <img src={coverUrl} alt={t.name} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" style={{ transitionDuration: "400ms" }} />
 						: <div className="w-full h-full flex items-center justify-center text-[40px] font-black select-none opacity-60" style={{ color: "var(--color-muted-soft)" }}>{t.name.charAt(0).toUpperCase()}</div>
 					}
-					{deleted && (
-						<span className="absolute top-3 left-3 px-2 py-0.5 rounded-full !text-xs font-semibold" style={{ background: "rgba(220,38,38,0.85)", color: "#fff" }}>
-							ถูกลบ
-						</span>
-					)}
-					{/* Bottom gradient + title overlay */}
 					<div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)" }} />
 					<div className="absolute bottom-0 left-0 right-0 px-md pb-sm pt-lg flex items-end justify-between gap-sm">
 						<span className="text-white font-semibold !text-[20px] leading-snug line-clamp-2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{t.name}</span>
-						{/* Count chips */}
-						<div className="flex-shrink-0 flex gap-xs">
+						<div className="shrink-0 flex gap-xs">
 							<span className="flex items-center gap-1 px-2 py-0.5 rounded-full !text-xs font-semibold" style={{ background: "rgba(255,255,255,0.18)", color: "#fff", backdropFilter: "blur(4px)" }}>
 								{regCount} <span style={{ opacity: 0.75 }}>ลง</span>
 							</span>
@@ -346,8 +277,6 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						</div>
 					</div>
 				</div>
-
-				{/* Period info */}
 				<div className="px-md py-sm grid gap-xs text-sm" style={{ gridTemplateColumns: "1fr 1fr" }}>
 					{[
 						{ label: "ลงทะเบียน", status: regStatus, open: t.registration_open_at, close: t.registration_close_at },
@@ -363,64 +292,25 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 						</div>
 					))}
 				</div>
-			</>
-		);
-
-		if (deleted) {
-			return (
-				<div className="card !p-0 flex flex-col overflow-hidden opacity-90">
-					{cardInner}
-					<div className="px-md py-sm border-t border-hairline flex items-center justify-between gap-sm">
-						<span className="!text-xs text-muted">
-							ลบเมื่อ: {fmtDate(t.deleted_at)}
-						</span>
-						<button
-							type="button"
-							className="btn btn-sm btn-secondary"
-							disabled={restoringId === t.id}
-							onClick={() => handleRestore(t.id)}
-						>
-							<IconRotateCcw size={14} />
-							{restoringId === t.id ? "กำลังกู้คืน..." : "กู้คืน"}
-						</button>
-					</div>
-				</div>
-			);
-		}
-
-		return (
-			<a href={href} className="card !p-0 flex flex-col overflow-hidden no-underline group transition-all hover:shadow-lg">
-				{cardInner}
 			</a>
 		);
 	};
-	const sessionTournament = tournaments.find((t: any) => t.id === loaderData.tournamentId);
 
-	return (
-		<div className="max-w-[1200px] mx-auto px-lg py-xl">
-			<div className="flex justify-between items-center mb-lg">
-				<div>
-					<h2 className="!text-[26px] font-semibold m-0">
-						{isSuperAdmin ? "all Thailand" : (sessionTournament?.name || "Dashboard")}
-					</h2>
-					<span className="text-sm text-muted">
-						{role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : "Assistant"}
-					</span>
+	if (role === "super_admin") {
+		return (
+			<div className="max-w-[1200px] mx-auto px-lg py-xl">
+				<div className="flex justify-between items-center mb-lg">
+					<div>
+						<h2 className="!text-[26px] font-semibold m-0">ทุกรายการ</h2>
+						<span className="text-sm text-muted">Super Admin</span>
+					</div>
+					<a href="/portal/site-settings" className="btn btn-secondary no-underline">ตั้งค่าเว็บไซต์</a>
 				</div>
-				{isSuperAdmin && (
-					<button className="btn btn-primary" onClick={() => createDialogRef.current?.showModal()}>
-						<IconPlus size={16} /> สร้างรายการ
-					</button>
-				)}
-			</div>
 
-			{isSuperAdmin ? (
-				tournaments.length === 0 ? (
+				{tournaments.length === 0 ? (
 					<div className="card text-center text-muted">
 						<p className="text-base mb-md">ยังไม่มีรายการ</p>
-						<button className="btn btn-primary" onClick={() => createDialogRef.current?.showModal()}>
-							<IconPlus size={16} /> สร้างรายการใหม่
-						</button>
+						<a href="/portal/site-settings" className="btn btn-primary no-underline">ไปที่ตั้งค่าเว็บไซต์</a>
 					</div>
 				) : (
 					<div className="grid gap-sm" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
@@ -428,117 +318,29 @@ export default function AdminIndexPage({ loaderData }: Route.ComponentProps) {
 							<TournamentCard key={t.id} t={t} href={`/portal/${t.slug}`} />
 						))}
 					</div>
-				)
-			) : (
-				<div className="grid gap-sm" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
-					{sessionTournament ? (
-						<TournamentCard t={sessionTournament} href={`/portal/${sessionTournament.slug}`} />
-					) : (
-						<div className="card text-center text-muted">
-							ไม่พบรายการของคุณ — กรุณาเข้าสู่ระบบใหม่
-						</div>
-					)}
+				)}
+			</div>
+		);
+	}
+
+	return (
+		<div className="max-w-[1200px] mx-auto px-lg py-xl">
+			<div className="flex justify-between items-center mb-lg">
+				<div>
+					<h2 className="!text-[26px] font-semibold m-0">{sessionTournament?.name || "Dashboard"}</h2>
+					<span className="text-sm text-muted">{role === "admin" ? "Admin" : "Assistant"}</span>
 				</div>
-			)}
+			</div>
 
-			{isSuperAdmin && deletedTournaments.length > 0 && (
-				<div className="mt-xl pt-xl border-t border-hairline">
-					{restoreError && (
-						<div className="p-sm p-md bg-[#fef2f2] border border-error rounded-md text-error text-sm mb-md">
-							{restoreError}
-						</div>
-					)}
-					<h3 className="!text-[20px] font-semibold m-0 mb-md text-muted">รายการที่ถูกลบ</h3>
-					<div className="grid gap-sm" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
-						{deletedTournaments.map((t: any) => (
-							<TournamentCard key={t.id} t={t} deleted />
-						))}
+			<div className="grid gap-sm" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
+				{sessionTournament ? (
+					<TournamentCard t={sessionTournament} href={`/portal/${sessionTournament.slug}`} />
+				) : (
+					<div className="card text-center text-muted">
+						ไม่พบรายการของคุณ — กรุณาเข้าสู่ระบบใหม่
 					</div>
-				</div>
-			)}
-
-			{/* ─── Create Tournament Dialog ─────────── */}
-			<dialog ref={createDialogRef} className="modal">
-				<div className="modal-content max-w-[560px]">
-					<div className="flex justify-between items-center mb-lg">
-						<h2 className="text-[20px] m-0">สร้างรายการใหม่</h2>
-						<button className="btn btn-sm btn-ghost btn-circle" onClick={() => createDialogRef.current?.close()}>
-							<IconX size={16} />
-						</button>
-					</div>
-
-					{createError && (
-						<div className="p-sm p-md bg-[#fef2f2] border border-error rounded-md text-error text-sm mb-md">
-							{createError}
-						</div>
-					)}
-
-					<div className="flex flex-col gap-md">
-						<div>
-							<label className="label">ชื่อรายการ *</label>
-							<input className="input w-full" placeholder="เช่น Junior Golf Open 2026" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
-						</div>
-						<div>
-							<label className="label">Slug (URL)</label>
-							<input className="input w-full" placeholder="auto-from-name" value={createForm.slug} onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })} />
-						</div>
-
-						<div className="border-t border-hairline pt-md">
-							<p className="text-sm font-semibold mb-sm">ช่วงเวลาลงทะเบียน</p>
-							<div className="grid grid-cols-2 gap-sm">
-								<div>
-									<label className="label">เปิด *</label>
-									<input className="input w-full" type="datetime-local" value={createForm.registration_open_at} onChange={(e) => setCreateForm({ ...createForm, registration_open_at: e.target.value })} />
-								</div>
-								<div>
-									<label className="label">ปิด *</label>
-									<input className="input w-full" type="datetime-local" value={createForm.registration_close_at} onChange={(e) => setCreateForm({ ...createForm, registration_close_at: e.target.value })} />
-								</div>
-							</div>
-						</div>
-
-						<div>
-							<p className="text-sm font-semibold mb-sm">ช่วงเวลาเช็คอิน</p>
-							<div className="grid grid-cols-2 gap-sm">
-								<div>
-									<label className="label">เปิด *</label>
-									<input className="input w-full" type="datetime-local" value={createForm.checkin_open_at} onChange={(e) => setCreateForm({ ...createForm, checkin_open_at: e.target.value })} />
-								</div>
-								<div>
-									<label className="label">ปิด *</label>
-									<input className="input w-full" type="datetime-local" value={createForm.checkin_close_at} onChange={(e) => setCreateForm({ ...createForm, checkin_close_at: e.target.value })} />
-								</div>
-							</div>
-						</div>
-
-						<div className="border-t border-hairline pt-md">
-							<p className="text-sm font-semibold mb-sm">รหัสผ่าน</p>
-							<div className="flex flex-col gap-sm">
-								<div>
-									<label className="label">Super Admin *</label>
-									<input className="input w-full" type="password" placeholder="ต้องระบุ" value={createForm.password_super_admin} onChange={(e) => setCreateForm({ ...createForm, password_super_admin: e.target.value })} />
-								</div>
-								<div>
-									<label className="label">Admin</label>
-									<input className="input w-full" type="password" placeholder="ไม่จำเป็น" value={createForm.password_admin} onChange={(e) => setCreateForm({ ...createForm, password_admin: e.target.value })} />
-								</div>
-								<div>
-									<label className="label">Assistant</label>
-									<input className="input w-full" type="password" placeholder="ไม่จำเป็น" value={createForm.password_assistant} onChange={(e) => setCreateForm({ ...createForm, password_assistant: e.target.value })} />
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<div className="modal-action">
-						<button className="btn btn-ghost" onClick={() => createDialogRef.current?.close()}>ยกเลิก</button>
-						<button className="btn btn-primary" onClick={handleCreate} disabled={creating}>
-							{creating ? "กำลังสร้าง..." : (<><IconPlus size={16} /> สร้างรายการ</>)}
-						</button>
-					</div>
-				</div>
-				<form method="dialog" className="modal-backdrop"><button>close</button></form>
-			</dialog>
+				)}
+			</div>
 		</div>
 	);
 }

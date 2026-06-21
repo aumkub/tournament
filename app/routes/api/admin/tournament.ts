@@ -132,18 +132,18 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		if (test_mode !== null) { sets.push("test_mode = ?"); binds.push(test_mode === "1" ? 1 : 0); }
 		const success_messages_json = formData.get("success_messages_json") as string | null;
 		if (success_messages_json !== null) { sets.push("success_messages_json = ?"); binds.push(success_messages_json || "{}"); }
+		const form_descriptions_json = formData.get("form_descriptions_json") as string | null;
+		if (form_descriptions_json !== null) { sets.push("form_descriptions_json = ?"); binds.push(form_descriptions_json || "{}"); }
 
 		// Handle password fields from form data
 		const pwAssistant = formData.get("password_assistant") as string | null;
 		const pwAdmin = formData.get("password_admin") as string | null;
-		const pwSuperAdmin = formData.get("password_super_admin") as string | null;
 
-		if (pwAssistant || pwAdmin || pwSuperAdmin) {
+		if (pwAssistant || pwAdmin) {
 			const existing = await env.DB.prepare("SELECT passwords_json FROM tournaments WHERE slug = ? AND deleted_at IS NULL").bind(slug).first();
 			const currentPw = JSON.parse((existing?.passwords_json as string) || "{}");
 			if (pwAssistant) currentPw.assistant = await hashPassword(pwAssistant);
 			if (pwAdmin) currentPw.admin = await hashPassword(pwAdmin);
-			if (pwSuperAdmin) currentPw.super_admin = await hashPassword(pwSuperAdmin);
 			sets.push("passwords_json = ?");
 			binds.push(JSON.stringify(currentPw));
 		}
@@ -181,7 +181,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		attendee_limit?: number | null;
 		form_urls_json?: string;
 		email_templates_json?: string;
-		passwords?: { assistant?: string; admin?: string; super_admin?: string };
+		passwords?: { assistant?: string; admin?: string };
 	};
 
 	const sets: string[] = [];
@@ -209,7 +209,6 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		const currentPw = JSON.parse((existing?.passwords_json as string) || "{}");
 		if (body.passwords.assistant) currentPw.assistant = await hashPassword(body.passwords.assistant);
 		if (body.passwords.admin) currentPw.admin = await hashPassword(body.passwords.admin);
-		if (body.passwords.super_admin) currentPw.super_admin = await hashPassword(body.passwords.super_admin);
 		sets.push("passwords_json = ?");
 		binds.push(JSON.stringify(currentPw));
 	}

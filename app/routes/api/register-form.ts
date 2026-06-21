@@ -2,6 +2,7 @@ import type { Route } from "./+types/api/register-form";
 import { isRegistrationOpen, nowEpoch } from "../../../lib/utils";
 import { getFormConfig } from "../../../lib/form-configs/index";
 import { sendRegistrationEmail } from "../../../lib/registration-email";
+import { getSiteSettings } from "../../../lib/site-settings";
 
 export async function action({ request, params, context }: Route.ActionArgs) {
 	const env = context.cloudflare.env;
@@ -32,7 +33,26 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		form_id: string;
 		email: string;
 		data: Record<string, unknown>;
+		turnstileToken?: string;
 	};
+
+	// Turnstile verification (if secret key is configured and not running locally)
+	const isLocal = ["localhost", "127.0.0.1"].includes(new URL(request.url).hostname);
+	const siteSettings = await getSiteSettings(env.DB);
+	if (siteSettings.turnstileSecretKey && !isLocal) {
+		if (!body.turnstileToken) {
+			return Response.json({ error: "กรุณายืนยัน Turnstile" }, { status: 400 });
+		}
+		const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({ secret: siteSettings.turnstileSecretKey, response: body.turnstileToken }),
+		});
+		const verifyData = await verifyRes.json() as { success: boolean };
+		if (!verifyData.success) {
+			return Response.json({ error: "การยืนยัน Turnstile ล้มเหลว กรุณาลองใหม่" }, { status: 400 });
+		}
+	}
 
 	if (!body.form_id) {
 		return Response.json({ error: "form_id is required" }, { status: 400 });

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useId } from "react";
 import { IconCheck, IconUpload, IconX } from "../ui/icons";
 
 interface UploadedFile {
@@ -38,6 +38,7 @@ export function FileUploadField({
 	const [error, setError] = useState<string | null>(null);
 	const [uploaded, setUploaded] = useState<UploadedFile[]>([]);
 	const inputRef = useRef<HTMLInputElement>(null);
+	const inputId = useId();
 
 	const isPhoto = category === "photos";
 
@@ -161,13 +162,14 @@ export function FileUploadField({
 				</div>
 			)}
 
-			{/* Upload zone */}
+			{/* Upload zone — label wraps a real input so LINE LIFF / iOS can open picker reliably */}
 			{showZone && (
-				<div
+				<label
+					htmlFor={inputId}
 					className="upload-zone"
-					onClick={() => inputRef.current?.click()}
 					style={{
 						cursor: uploading ? "wait" : "pointer",
+						display: "block",
 						...(hasError && uploaded.length === 0 ? { borderColor: "var(--color-error)" } : {}),
 					}}
 				>
@@ -178,17 +180,20 @@ export function FileUploadField({
 							<IconUpload size={16} /> {multiple ? "คลิกเพื่อเพิ่มไฟล์" : "คลิกเพื่อเลือกไฟล์"} (สูงสุด {maxSizeMB}MB)
 						</p>
 					)}
-				</div>
-			)}
 
-			<input
-				ref={inputRef}
-				type="file"
-				accept={accept}
-				onChange={handleUpload}
-				className="hidden"
-				multiple={multiple}
-			/>
+					{/* Input lives inside the label — LINE LIFF requires this pattern */}
+					<input
+						id={inputId}
+						ref={inputRef}
+						type="file"
+						accept={accept}
+						onChange={handleUpload}
+						disabled={uploading}
+						multiple={multiple}
+						style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+					/>
+				</label>
+			)}
 			{error && (
 				<p className="text-error text-sm mt-1">{error}</p>
 			)}

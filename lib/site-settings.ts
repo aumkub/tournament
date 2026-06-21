@@ -12,6 +12,9 @@ export type SiteSettings = {
 	footerLine2: string;
 	metaTitle: string;
 	metaDescription: string;
+	turnstileSiteKey: string | null;
+	turnstileSecretKey: string | null;
+	superAdminPasswordHash: string | null;
 };
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
@@ -27,6 +30,9 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
 	footerLine2: "Built with Cloudflare Workers • React Router 7",
 	metaTitle: "all Thailand Registration System",
 	metaDescription: "ระบบลงทะเบียนและเช็คอินสำหรับงานแข่งขัน",
+	turnstileSiteKey: null,
+	turnstileSecretKey: null,
+	superAdminPasswordHash: null,
 };
 
 type SiteSettingsRow = {
@@ -40,6 +46,9 @@ type SiteSettingsRow = {
 	footer_line2: string;
 	meta_title: string;
 	meta_description: string;
+	turnstile_site_key: string | null;
+	turnstile_secret_key: string | null;
+	super_admin_password_hash: string | null;
 };
 
 function headerImageUrl(key: string | null): string | null {
@@ -62,13 +71,16 @@ function rowToSettings(row: SiteSettingsRow): SiteSettings {
 		footerLine2: row.footer_line2,
 		metaTitle: row.meta_title,
 		metaDescription: row.meta_description,
+		turnstileSiteKey: row.turnstile_site_key || null,
+		turnstileSecretKey: row.turnstile_secret_key || null,
+		superAdminPasswordHash: row.super_admin_password_hash || null,
 	};
 }
 
 export async function getSiteSettings(db: D1Database): Promise<SiteSettings> {
 	const row = await db
 		.prepare(
-			"SELECT header_mode, header_brand, header_logo_letter, header_image_key, home_title, home_description, footer_line1, footer_line2, meta_title, meta_description FROM site_settings WHERE id = 'default'",
+			"SELECT header_mode, header_brand, header_logo_letter, header_image_key, home_title, home_description, footer_line1, footer_line2, meta_title, meta_description, turnstile_site_key, turnstile_secret_key, super_admin_password_hash FROM site_settings WHERE id = 'default'",
 		)
 		.first<SiteSettingsRow>();
 
@@ -93,6 +105,9 @@ export async function updateSiteSettings(
 				footer_line2 = ?,
 				meta_title = ?,
 				meta_description = ?,
+				turnstile_site_key = ?,
+				turnstile_secret_key = ?,
+				super_admin_password_hash = ?,
 				updated_at = unixepoch()
 			WHERE id = 'default'`,
 		)
@@ -107,6 +122,9 @@ export async function updateSiteSettings(
 			settings.footerLine2.trim(),
 			settings.metaTitle.trim() || DEFAULT_SITE_SETTINGS.metaTitle,
 			settings.metaDescription.trim() || DEFAULT_SITE_SETTINGS.metaDescription,
+			settings.turnstileSiteKey?.trim() || null,
+			settings.turnstileSecretKey?.trim() || null,
+			settings.superAdminPasswordHash || null,
 		)
 		.run();
 }

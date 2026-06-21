@@ -3,6 +3,7 @@ import type { FormConfig, FieldConfig, StepConfig } from "../../types/form-confi
 import { FileUploadField } from "./FileUploadField";
 import { IconCheck, IconArrowRight, IconArrowLeft } from "../ui/icons";
 import { Select } from "../ui/Select";
+import { TurnstileWidget } from "../ui/TurnstileWidget";
 
 type Lang = "th" | "en";
 
@@ -13,6 +14,9 @@ interface DynamicMultiStepFormProps {
 	typeLabel: string;
 	lang?: Lang;
 	testMode?: boolean;
+	turnstileSiteKey?: string;
+	description?: { th: string; en: string } | string;
+	isStaff?: boolean;
 }
 
 function t(val: { th: string; en: string }, lang: Lang): string {
@@ -548,6 +552,9 @@ export function DynamicMultiStepForm({
 	typeLabel,
 	lang = "th",
 	testMode = false,
+	turnstileSiteKey,
+	description,
+	isStaff = false,
 }: DynamicMultiStepFormProps) {
 	const [stepIndex, setStepIndex] = useState(0);
 	const [data, setData] = useState<Record<string, unknown>>({});
@@ -556,6 +563,7 @@ export function DynamicMultiStepForm({
 	const [isDuplicate, setIsDuplicate] = useState(false);
 	const [errorFields, setErrorFields] = useState<Set<string>>(new Set());
 	const [registrationId] = useState(() => crypto.randomUUID());
+	const [turnstileToken, setTurnstileToken] = useState("");
 
 	const activeSteps = resolveActiveSteps(config.steps, data);
 	const currentStep: StepConfig = activeSteps[stepIndex] ?? activeSteps[activeSteps.length - 1];
@@ -610,6 +618,10 @@ export function DynamicMultiStepForm({
 
 	const handleSubmit = async () => {
 		if (!validateStep(currentStep)) return;
+		if (turnstileSiteKey && !turnstileToken) {
+			setError(lang === "th" ? "กรุณายืนยัน Turnstile ก่อนส่งใบสมัคร" : "Please complete the Turnstile verification before submitting");
+			return;
+		}
 		setSubmitting(true);
 		setError(null); setIsDuplicate(false);
 		try {
@@ -617,7 +629,7 @@ export function DynamicMultiStepForm({
 			const res = await fetch(`/api/register/${slug}/form`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ form_id: config.id, email, data }),
+				body: JSON.stringify({ form_id: config.id, email, data, turnstileToken: turnstileToken || undefined }),
 			});
 			const text = await res.text();
 			let result: any = {};
@@ -692,6 +704,17 @@ export function DynamicMultiStepForm({
 					{t(currentStep.title, lang)}
 				</h2>
 
+				{stepIndex === 0 && description && (() => {
+					const html = typeof description === "string" ? description : (description[lang] || description.th || description.en || "");
+					return html ? (
+						<div
+							className="form-description mb-xl px-md py-sm rounded-lg"
+							style={{ background: "var(--color-surface-soft)", borderLeft: "3px solid var(--color-primary)" }}
+							dangerouslySetInnerHTML={{ __html: html }}
+						/>
+					) : null;
+				})()}
+
 				{currentStep.showSummary && (
 					<SummaryCard data={data} config={config} lang={lang} />
 				)}
@@ -729,6 +752,16 @@ export function DynamicMultiStepForm({
 					</div>
 				)}
 
+				{isLastStep && turnstileSiteKey && (
+					<div className="mt-xl flex justify-center">
+						<TurnstileWidget
+							siteKey={turnstileSiteKey}
+							onToken={setTurnstileToken}
+							onExpire={() => setTurnstileToken("")}
+						/>
+					</div>
+				)}
+
 				<div className="flex gap-3 mt-xl">
 					{stepIndex > 0 && (
 						<button type="button" className="btn btn-secondary flex-1" onClick={handleBack}>
@@ -752,8 +785,8 @@ export function DynamicMultiStepForm({
 				</div>
 			</div>
 
-			{/* Test mode floating button */}
-			{testMode && (
+			{/* Test mode floating button — staff only */}
+			{testMode && isStaff && (
 				<button
 					type="button"
 					onClick={handleAutoFill}

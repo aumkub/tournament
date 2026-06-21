@@ -1,6 +1,7 @@
 import type { Route } from "./+types/api/auth";
 import { verifyPassword, parsePasswords } from "../../../lib/auth";
 import { createSession, sessionCookieHeader } from "../../../lib/kv-session";
+import { getSiteSettings } from "../../../lib/site-settings";
 import type { Role } from "../../../types/registration";
 
 const MAX_ATTEMPTS = 5;
@@ -70,16 +71,71 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		);
 	}
 
-	const body = await request.json() as { password: string; website?: string };
-	const { password, website } = body;
+	const body = await request.json() as { password: string; website?: string; turnstileToken?: string; devBypass?: string };
+	const { password, website, turnstileToken, devBypass } = body;
 
 	// Honeypot — bots fill "website" field
 	if (website) {
 		return Response.json({ role: "assistant" }, { status: 200 });
 	}
 
+	const isLocal = ["localhost", "127.0.0.1"].includes(new URL(request.url).hostname);
+
+	// Dev bypass — localhost only
+	if (isLocal && devBypass) {
+		const role = devBypass as "admin" | "assistant" | "super_admin";
+		const tournament = await env.DB.prepare(
+			"SELECT * FROM tournaments WHERE slug = ? AND deleted_at IS NULL",
+		).bind(slug).first();
+		if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
+		const token = await createSession(env.SESSIONS, { role, tournamentId: tournament.id as string });
+		return new Response(JSON.stringify({ role }), {
+			status: 200,
+			headers: { "Set-Cookie": sessionCookieHeader(token, 28800, request), "Content-Type": "application/json" },
+		});
+	}
+
+	// Turnstile verification (if secret key is configured and not running locally)
+	const siteSettings = await getSiteSettings(env.DB);
+	if (siteSettings.turnstileSecretKey && !isLocal) {
+		if (!turnstileToken) {
+			return Response.json({ error: "กรุณายืนยัน Turnstile" }, { status: 400 });
+		}
+		const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({ secret: siteSettings.turnstileSecretKey, response: turnstileToken }),
+		});
+		const verifyData = await verifyRes.json() as { success: boolean };
+		if (!verifyData.success) {
+			return Response.json({ error: "การยืนยัน Turnstile ล้มเหลว กรุณาลองใหม่" }, { status: 400 });
+		}
+	}
+
 	if (!password) {
 		return Response.json({ error: "Password required" }, { status: 400 });
+	}
+
+	// Check site-level super admin password first
+	if (siteSettings.superAdminPasswordHash && (await verifyPassword(password, siteSettings.superAdminPasswordHash))) {
+		await clearFailures(env.SESSIONS, ip, slug);
+		const tournament = await env.DB.prepare(
+			"SELECT * FROM tournaments WHERE slug = ? AND deleted_at IS NULL",
+		).bind(slug).first();
+		if (!tournament) {
+			return Response.json({ error: "Tournament not found" }, { status: 404 });
+		}
+		const token = await createSession(env.SESSIONS, {
+			role: "super_admin",
+			tournamentId: tournament.id as string,
+		});
+		return new Response(JSON.stringify({ role: "super_admin" }), {
+			status: 200,
+			headers: {
+				"Set-Cookie": sessionCookieHeader(token, 28800, request),
+				"Content-Type": "application/json",
+			},
+		});
 	}
 
 	// Look up tournament by slug
@@ -94,11 +150,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
 	const passwords = parsePasswords(tournament.passwords_json as string);
 
-	// Check each role
+	// Check admin and assistant roles only (super_admin is now site-level)
 	let matchedRole: Role | null = null;
-	if (passwords.super_admin && (await verifyPassword(password, passwords.super_admin))) {
-		matchedRole = "super_admin";
-	} else if (passwords.admin && (await verifyPassword(password, passwords.admin))) {
+	if (passwords.admin && (await verifyPassword(password, passwords.admin))) {
 		matchedRole = "admin";
 	} else if (passwords.assistant && (await verifyPassword(password, passwords.assistant))) {
 		matchedRole = "assistant";

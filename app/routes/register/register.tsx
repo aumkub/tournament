@@ -7,6 +7,8 @@ import { IconClock, IconCamera } from "../../../components/ui/icons";
 import { FORM_CONFIGS, getFormConfigBySlug } from "../../../lib/form-configs/index";
 import { resolveFormTypeLabel } from "../../../lib/form-labels";
 import type { FormConfig } from "../../../types/form-config";
+import { getSiteSettings } from "../../../lib/site-settings";
+import { parseCookie, verifySession } from "../../../lib/kv-session";
 
 type Lang = "th" | "en";
 
@@ -40,10 +42,13 @@ function FlagGB({ size = 24 }: { size?: number }) {
 	);
 }
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, context, request }: Route.LoaderArgs) {
 	const env = context.cloudflare.env;
 	const slug = params.slug;
 	const type = params.type;
+	const siteSettings = await getSiteSettings(env.DB);
+	const isLocal = ["localhost", "127.0.0.1"].includes(new URL(request.url).hostname);
+	const turnstileSiteKey = isLocal ? null : (siteSettings.turnstileSiteKey || null);
 
 	const tournament = await env.DB.prepare(
 		"SELECT * FROM tournaments WHERE slug = ? AND deleted_at IS NULL",
@@ -75,6 +80,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 	}
 
 	const testMode = !!(tournament.test_mode as number | boolean);
+	const token = parseCookie(request.headers.get("Cookie"));
+	const session = token ? await verifySession(env.SESSIONS, token) : null;
+	const isStaff = session?.role === "super_admin" || session?.role === "admin";
+
+	let formDescriptions: Record<string, string> = {};
+	try { formDescriptions = JSON.parse((tournament.form_descriptions_json as string) || "{}"); } catch { /* ignore */ }
 
 	if (formId) {
 		const formConfig = FORM_CONFIGS[formId];
@@ -90,6 +101,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 			registrationClose: tournament.registration_close_at as number,
 			formConfig,
 			testMode,
+			turnstileSiteKey,
+			formDescription: (formDescriptions[formId] && (formDescriptions[formId].th || formDescriptions[formId].en)) ? formDescriptions[formId] : null,
+			isStaff,
 		};
 	}
 
@@ -130,6 +144,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 		registrationClose: tournament.registration_close_at as number,
 		formConfig: null,
 		testMode,
+		turnstileSiteKey,
+		formDescription: null,
+		isStaff,
 	};
 }
 
@@ -271,6 +288,9 @@ export default function RegisterPage({ loaderData }: Route.ComponentProps) {
 							typeLabel={typeLabel}
 							lang={lang}
 							testMode={loaderData.testMode}
+							turnstileSiteKey={loaderData.turnstileSiteKey ?? undefined}
+							description={(loaderData as any).formDescription ?? undefined}
+							isStaff={(loaderData as any).isStaff ?? false}
 						  />
 						: isCompetitor
 							? <CompetitorForm slug={loaderData.slug} tournamentName={loaderData.tournamentName} typeLabel={typeLabel} />

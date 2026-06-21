@@ -2,7 +2,8 @@ import type { Route } from "./+types/admin/settings";
 import { parseCookie, verifySession, hasRole } from "../../../lib/kv-session";
 import { FORM_CONFIGS } from "../../../lib/form-configs/index";
 import { getDefaultEmailTemplate, EMAIL_TEMPLATE_LABELS, EMAIL_TEMPLATE_VARS } from "../../../lib/email-templates/index";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { TiptapEditor } from "../../../components/ui/TiptapEditor";
 import {
 	IconSave,
 	IconCheck,
@@ -19,6 +20,7 @@ import {
 	ImageIcon,
 	IconUser,
 	IconUsers,
+	IconCheckCircle,
 	IconAlertTriangle,
 } from "../../../components/ui/icons";
 import { AdminNav } from "../../../components/admin/AdminNav";
@@ -66,8 +68,8 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 	const [coverFile, setCoverFile] = useState<File | null>(null);
 
 	const [form, setForm] = useState({
-		name: t.name || "",
-		slug: t.slug || "",
+		name: t.name as string || "",
+		slug: t.slug as string || "",
 		registration_limit: t.registration_limit || "",
 		competitor_limit: t.competitor_limit || "",
 		attendee_limit: t.attendee_limit || "",
@@ -81,7 +83,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 		attendee_title: t.attendee_title || "",
 		competitor_title_en: t.competitor_title_en || "",
 		attendee_title_en: t.attendee_title_en || "",
-		passwords: { assistant: "", admin: "", super_admin: "" },
+		passwords: { assistant: "", admin: "" },
 	});
 
 	// Dynamic form config state
@@ -94,6 +96,11 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 	const [emailTemplates, setEmailTemplates] = useState<Record<string, string>>(() => {
 		try { return JSON.parse(t.email_templates_json || "{}"); } catch { return {}; }
 	});
+	const [formDescriptions, setFormDescriptions] = useState<Record<string, { th: string; en: string }>>(() => {
+		try { return JSON.parse(t.form_descriptions_json || "{}"); } catch { return {}; }
+	});
+	const [isMounted, setIsMounted] = useState(false);
+	useEffect(() => setIsMounted(true), []);
 	const [activeEmailType, setActiveEmailType] = useState<string>("attendee");
 	const [emailView, setEmailView] = useState<"edit" | "preview">("edit");
 	const [testEmailAddress, setTestEmailAddress] = useState("");
@@ -200,6 +207,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			if (form.checkin_close_at) fd.append("checkin_close_at", form.checkin_close_at);
 			fd.append("email_templates_json", JSON.stringify(emailTemplates));
 			fd.append("success_messages_json", JSON.stringify(successMessages));
+			fd.append("form_descriptions_json", JSON.stringify(formDescriptions));
 			fd.append("competitor_url", form.competitor_url);
 			fd.append("attendee_url", form.attendee_url);
 			fd.append("competitor_title", form.competitor_title);
@@ -212,7 +220,6 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			fd.append("test_mode", testMode ? "1" : "0");
 			if (form.passwords.assistant) fd.append("password_assistant", form.passwords.assistant);
 			if (form.passwords.admin) fd.append("password_admin", form.passwords.admin);
-			if (form.passwords.super_admin) fd.append("password_super_admin", form.passwords.super_admin);
 
 			const formUrls: Record<string, string> = {};
 			if (competitorFormId) {
@@ -254,6 +261,10 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 		{ id: "email", label: "อีเมล", icon: <IconMail size={16} /> },
 		{ id: "reset", label: "ล้างค่า", icon: <IconAlertTriangle size={16} /> },
 	];
+
+	// Registration sub-tab state
+	type RegSubTab = "general" | "competitor" | "attendee" | "success";
+	const [regSubTab, setRegSubTab] = useState<RegSubTab>("general");
 
 	// Reset tab state
 	const [resetRegConfirm, setResetRegConfirm] = useState("");
@@ -346,7 +357,7 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 			)}
 
 			{/* Tabs */}
-			<div className="flex gap-1 mb-lg border-b border-hairline">
+			<div className="flex gap-1 mb-lg border-b border-hairline overflow-x-auto">
 				{tabs.map((tab) => (
 					<button
 						key={tab.id}
@@ -484,175 +495,254 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 
 			{/* ── Tab: Registration & Forms ─────────────── */}
 			{activeTab === "registration" && (
-				<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
+				<div style={{ display: "flex", gap: "var(--spacing-lg)", alignItems: "flex-start" }}>
 
-					{/* ── Test Mode ── */}
-					<div className={`card flex items-center justify-between gap-md transition-colors ${testMode ? "border-warning bg-[#fffbeb]" : ""}`}>
-						<div className="flex items-center gap-3 min-w-0">
-							<div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${testMode ? "bg-warning/15" : "bg-surface-soft"}`}>
-								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={testMode ? "#d4a017" : "var(--color-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-									<path d="M9 3v8.5L4.5 18A2 2 0 0 0 6.31 21h11.38a2 2 0 0 0 1.81-2.5L15 11.5V3"/>
-									<line x1="9" y1="3" x2="15" y2="3"/>
-								</svg>
+					{/* ── Vertical sub-nav ── */}
+					<div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 148, flexShrink: 0 }}>
+						{(
+							[
+								{ id: "general" as RegSubTab, icon: <IconSettings size={14} />, label: "ทั่วไป" },
+								{ id: "competitor" as RegSubTab, icon: <IconUser size={14} />, label: form.competitor_title || "ผู้เข้าแข่งขัน" },
+								{ id: "attendee" as RegSubTab, icon: <IconUsers size={14} />, label: form.attendee_title || "ผู้ชม" },
+								{ id: "success" as RegSubTab, icon: <IconCheckCircle size={14} />, label: "ยืนยันการลงทะเบียน" },
+							]
+						).map((item) => (
+							<button
+								key={item.id}
+								type="button"
+								onClick={() => setRegSubTab(item.id)}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 8,
+									padding: "8px 12px",
+									borderRadius: "var(--radius-md)",
+									fontSize: 13,
+									fontWeight: regSubTab === item.id ? 600 : 400,
+									color: regSubTab === item.id ? "var(--color-primary)" : "var(--color-body)",
+									background: regSubTab === item.id ? "var(--color-surface-soft)" : "transparent",
+									border: regSubTab === item.id ? "1px solid var(--color-hairline)" : "1px solid transparent",
+									cursor: "pointer",
+									textAlign: "left",
+									width: "100%",
+								}}
+							>
+								{item.icon}
+								{item.label}
+							</button>
+						))}
+					</div>
+
+					{/* ── Sub-tab content ── */}
+					<div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "var(--spacing-lg)" }}>
+
+						{/* General — Test Mode */}
+						{regSubTab === "general" && (
+							<div className={`card flex items-center justify-between gap-md transition-colors ${testMode ? "border-warning bg-[#fffbeb]" : ""}`}>
+								<div className="flex items-center gap-3 min-w-0">
+									<div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${testMode ? "bg-warning/15" : "bg-surface-soft"}`}>
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={testMode ? "#d4a017" : "var(--color-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+											<path d="M9 3v8.5L4.5 18A2 2 0 0 0 6.31 21h11.38a2 2 0 0 0 1.81-2.5L15 11.5V3"/>
+											<line x1="9" y1="3" x2="15" y2="3"/>
+										</svg>
+									</div>
+									<div>
+										<p className="text-sm font-semibold text-ink m-0">โหมดทดสอบ</p>
+										<p className={`!text-xs m-0 mt-0.5 ${testMode ? "text-[#92400e]" : "text-muted"}`}>
+											{testMode
+												? "เปิดอยู่ — ปุ่มกรอกข้อมูลอัตโนมัติ + demo scenarios แสดงในฟอร์ม (เฉพาะ super admin)"
+												: "ปิดอยู่ — ผู้ใช้จะไม่เห็นฟีเจอร์ทดสอบ"}
+										</p>
+									</div>
+								</div>
+								<button
+									type="button"
+									role="switch"
+									aria-checked={testMode}
+									onClick={() => setTestMode((v) => !v)}
+									className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none border-0 cursor-pointer ${testMode ? "bg-warning" : "bg-hairline"}`}
+								>
+									<span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${testMode ? "left-[22px]" : "left-0.5"}`} />
+								</button>
 							</div>
-							<div>
-								<p className="text-sm font-semibold text-ink m-0">โหมดทดสอบ</p>
-								<p className={`!text-xs m-0 mt-0.5 ${testMode ? "text-[#92400e]" : "text-muted"}`}>
-									{testMode
-										? "เปิดอยู่ — ปุ่มกรอกข้อมูลอัตโนมัติ + demo scenarios แสดงในฟอร์ม"
-										: "ปิดอยู่ — ผู้ใช้จะไม่เห็นฟีเจอร์ทดสอบ"}
+						)}
+
+						{/* Competitor */}
+						{regSubTab === "competitor" && (
+							<div className="card">
+								<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-lg)" }}>
+									<IconUser size={16} />
+									<h2 style={{ fontSize: 18, margin: 0 }}>ผู้เข้าแข่งขัน</h2>
+								</div>
+								<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
+									<div>
+										<label className="label">URL Path (slug)</label>
+										<div style={{ display: "flex", alignItems: "center" }}>
+											<span style={{ padding: "8px 12px", background: "#f5f0e8", border: "1px solid #d5cfc4", borderRight: "none", borderRadius: "var(--radius-md) 0 0 var(--radius-md)", fontSize: 13, color: "var(--color-muted)", whiteSpace: "nowrap" }}>
+												/{t.slug}/register/
+											</span>
+											<input className="input input-bordered" style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }} placeholder="competitor" value={form.competitor_url} onChange={(e) => setForm({ ...form, competitor_url: e.target.value })} />
+										</div>
+									</div>
+									<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-sm)" }}>
+										<div>
+											<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (ไทย)</label>
+											<input className="input input-bordered w-full" placeholder="ผู้เข้าแข่งขัน" value={form.competitor_title} onChange={(e) => setForm({ ...form, competitor_title: e.target.value })} />
+										</div>
+										<div>
+											<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (EN)</label>
+											<input className="input input-bordered w-full" placeholder="Competitor" value={form.competitor_title_en} onChange={(e) => setForm({ ...form, competitor_title_en: e.target.value })} />
+										</div>
+									</div>
+									<div>
+										<label className="label" style={{ fontSize: 12 }}>ฟอร์ม</label>
+										<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+											<label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${competitorFormId === "" ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: competitorFormId === "" ? "var(--color-surface-soft)" : "transparent" }}>
+												<input type="radio" name="competitor-form" checked={competitorFormId === ""} onChange={() => setCompetitorFormId("")} style={{ accentColor: "var(--color-primary)" }} />
+												<div>
+													<span style={{ fontWeight: 500, fontSize: 14 }}>ลิงก์เดิม (Legacy)</span>
+													<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>ใช้ฟอร์มลงทะเบียนเดิม</p>
+												</div>
+											</label>
+											{Object.values(FORM_CONFIGS).map((cfg) => (
+												<label key={cfg.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${competitorFormId === cfg.id ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: competitorFormId === cfg.id ? "var(--color-surface-soft)" : "transparent" }}>
+													<input type="radio" name="competitor-form" checked={competitorFormId === cfg.id} onChange={() => setCompetitorFormId(cfg.id)} style={{ accentColor: "var(--color-primary)" }} />
+													<div>
+														<span style={{ fontWeight: 500, fontSize: 14 }}>{cfg.label.th}</span>
+														<span style={{ marginLeft: 6, fontSize: 12, color: "var(--color-muted)" }}>{cfg.label.en}</span>
+														<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>{cfg.steps.length} ขั้นตอน · {cfg.steps.reduce((n, s) => n + s.fields.length, 0)} ฟิลด์</p>
+													</div>
+												</label>
+											))}
+										</div>
+									</div>
+									{competitorFormId && isMounted && (
+										<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-sm)" }}>
+											<label className="label" style={{ fontSize: 12 }}>คำอธิบาย (แสดงขั้นตอนแรกของฟอร์ม)</label>
+											<div>
+												<p className="text-xs text-muted mt-2 mb-2">ภาษาไทย</p>
+												<TiptapEditor
+													value={formDescriptions[competitorFormId]?.th || ""}
+													onChange={(html) => setFormDescriptions((prev) => ({ ...prev, [competitorFormId]: { ...prev[competitorFormId], th: html } }))}													
+												/>
+											</div>
+											<div>
+												<p className="text-xs text-muted mt-2 mb-2">English</p>
+												<TiptapEditor
+													value={formDescriptions[competitorFormId]?.en || ""}
+													onChange={(html) => setFormDescriptions((prev) => ({ ...prev, [competitorFormId]: { ...prev[competitorFormId], en: html } }))}													
+												/>
+											</div>
+										</div>
+									)}
+								</div>
+							</div>
+						)}
+
+						{/* Attendee */}
+						{regSubTab === "attendee" && (
+							<div className="card">
+								<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-lg)" }}>
+									<IconUsers size={16} />
+									<h2 style={{ fontSize: 18, margin: 0 }}>ผู้ชม</h2>
+								</div>
+								<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
+									<div>
+										<label className="label">URL Path (slug)</label>
+										<div style={{ display: "flex", alignItems: "center" }}>
+											<span style={{ padding: "8px 12px", background: "#f5f0e8", border: "1px solid #d5cfc4", borderRight: "none", borderRadius: "var(--radius-md) 0 0 var(--radius-md)", fontSize: 13, color: "var(--color-muted)", whiteSpace: "nowrap" }}>
+												/{t.slug}/register/
+											</span>
+											<input className="input input-bordered" style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }} placeholder="attendee" value={form.attendee_url} onChange={(e) => setForm({ ...form, attendee_url: e.target.value })} />
+										</div>
+									</div>
+									<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-sm)" }}>
+										<div>
+											<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (ไทย)</label>
+											<input className="input input-bordered w-full" placeholder="ผู้ชม" value={form.attendee_title} onChange={(e) => setForm({ ...form, attendee_title: e.target.value })} />
+										</div>
+										<div>
+											<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (EN)</label>
+											<input className="input input-bordered w-full" placeholder="Attendee" value={form.attendee_title_en} onChange={(e) => setForm({ ...form, attendee_title_en: e.target.value })} />
+										</div>
+									</div>
+									<div>
+										<label className="label" style={{ fontSize: 12 }}>ฟอร์ม</label>
+										<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+											<label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${attendeeFormId === "" ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: attendeeFormId === "" ? "var(--color-surface-soft)" : "transparent" }}>
+												<input type="radio" name="attendee-form" checked={attendeeFormId === ""} onChange={() => setAttendeeFormId("")} style={{ accentColor: "var(--color-primary)" }} />
+												<div>
+													<span style={{ fontWeight: 500, fontSize: 14 }}>ลิงก์เดิม (Legacy)</span>
+													<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>ใช้ฟอร์มลงทะเบียนเดิม</p>
+												</div>
+											</label>
+											{Object.values(FORM_CONFIGS).map((cfg) => (
+												<label key={cfg.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${attendeeFormId === cfg.id ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: attendeeFormId === cfg.id ? "var(--color-surface-soft)" : "transparent" }}>
+													<input type="radio" name="attendee-form" checked={attendeeFormId === cfg.id} onChange={() => setAttendeeFormId(cfg.id)} style={{ accentColor: "var(--color-primary)" }} />
+													<div>
+														<span style={{ fontWeight: 500, fontSize: 14 }}>{cfg.label.th}</span>
+														<span style={{ marginLeft: 6, fontSize: 12, color: "var(--color-muted)" }}>{cfg.label.en}</span>
+														<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>{cfg.steps.length} ขั้นตอน · {cfg.steps.reduce((n, s) => n + s.fields.length, 0)} ฟิลด์</p>
+													</div>
+												</label>
+											))}
+										</div>
+									</div>
+									{attendeeFormId && isMounted && (
+										<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-sm)"}}>
+					
+											<label className="label" style={{ fontSize: 12 }}>คำอธิบาย (แสดงขั้นตอนแรกของฟอร์ม)</label>
+											<div>
+												<p className="text-xs text-muted mb-2">ภาษาไทย</p>
+												<TiptapEditor
+													value={formDescriptions[attendeeFormId]?.th || ""}
+													onChange={(html) => setFormDescriptions((prev) => ({ ...prev, [attendeeFormId]: { ...prev[attendeeFormId], th: html } }))}													
+												/>
+											</div>
+											<div className="mb-8">
+												<p className="text-xs text-muted mb-2 mt-2">English</p>
+												<TiptapEditor
+													value={formDescriptions[attendeeFormId]?.en || ""}
+													onChange={(html) => setFormDescriptions((prev) => ({ ...prev, [attendeeFormId]: { ...prev[attendeeFormId], en: html } }))}													
+												/>
+											</div>
+										</div>
+									)}
+								</div>
+							</div>
+						)}
+
+						{/* Success Messages */}
+						{regSubTab === "success" && (
+							<div className="card">
+								<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-sm)" }}>
+									<IconMail size={16} />
+									<h2 style={{ fontSize: 18, margin: 0 }}>ข้อความยืนยันการลงทะเบียน</h2>
+								</div>
+								<p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 0, marginBottom: "var(--spacing-lg)" }}>
+									แสดงหลังลงทะเบียนสำเร็จ และในอีเมลยืนยัน — แยกตามประเภทผู้ลงทะเบียน
 								</p>
-							</div>
-						</div>
-
-						<button
-							type="button"
-							role="switch"
-							aria-checked={testMode}
-							onClick={() => setTestMode((v) => !v)}
-							className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none border-0 cursor-pointer ${testMode ? "bg-warning" : "bg-hairline"}`}
-						>
-							<span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${testMode ? "left-[22px]" : "left-0.5"}`} />
-						</button>
-					</div>
-
-					{/* ── ผู้เข้าแข่งขัน card ── */}
-					<div className="card">
-						<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-lg)" }}>
-							<IconUser size={16} />
-							<h2 style={{ fontSize: 18, margin: 0 }}>ผู้เข้าแข่งขัน</h2>
-						</div>
-						<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
-							{/* Slug */}
-							<div>
-								<label className="label">URL Path (slug)</label>
-								<div style={{ display: "flex", alignItems: "center" }}>
-									<span style={{ padding: "8px 12px", background: "#f5f0e8", border: "1px solid #d5cfc4", borderRight: "none", borderRadius: "var(--radius-md) 0 0 var(--radius-md)", fontSize: 13, color: "var(--color-muted)", whiteSpace: "nowrap" }}>
-										/{t.slug}/register/
-									</span>
-									<input className="input input-bordered" style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }} placeholder="competitor" value={form.competitor_url} onChange={(e) => setForm({ ...form, competitor_url: e.target.value })} />
-								</div>
-							</div>
-							{/* Titles */}
-							<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-sm)" }}>
-								<div>
-									<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (ไทย)</label>
-									<input className="input input-bordered w-full" placeholder="ผู้เข้าแข่งขัน" value={form.competitor_title} onChange={(e) => setForm({ ...form, competitor_title: e.target.value })} />
-								</div>
-								<div>
-									<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (EN)</label>
-									<input className="input input-bordered w-full" placeholder="Competitor" value={form.competitor_title_en} onChange={(e) => setForm({ ...form, competitor_title_en: e.target.value })} />
-								</div>
-							</div>
-							{/* Form select */}
-							<div>
-								<label className="label" style={{ fontSize: 12 }}>ฟอร์ม</label>
-								<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-									{/* Legacy option */}
-									<label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${competitorFormId === "" ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: competitorFormId === "" ? "var(--color-surface-soft)" : "transparent" }}>
-										<input type="radio" name="competitor-form" checked={competitorFormId === ""} onChange={() => setCompetitorFormId("")} style={{ accentColor: "var(--color-primary)" }} />
-										<div>
-											<span style={{ fontWeight: 500, fontSize: 14 }}>ลิงก์เดิม (Legacy)</span>
-											<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>ใช้ฟอร์มลงทะเบียนเดิม</p>
+								<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
+									{Object.values(FORM_CONFIGS).map(({ id, label }) => ({
+										id,
+										label: `${label.th} (${label.en})`,
+									})).map(({ id, label }) => (
+										<div key={id}>
+											<label className="label" style={{ fontSize: 13 }}>{label}</label>
+											<textarea
+												className="input textarea"
+												rows={3}
+												placeholder="เช่น กำหนดการ, เวลานัดหมาย, ข้อมูลติดต่อ, ข้อควรทราบ... (เว้นว่างไว้ถ้าไม่ต้องการแสดง)"
+												value={successMessages[id] || ""}
+												onChange={(e) => setSuccessMessages((prev) => ({ ...prev, [id]: e.target.value }))}
+												style={{ resize: "vertical" }}
+											/>
 										</div>
-									</label>
-									{Object.values(FORM_CONFIGS).map((cfg) => (
-										<label key={cfg.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${competitorFormId === cfg.id ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: competitorFormId === cfg.id ? "var(--color-surface-soft)" : "transparent" }}>
-											<input type="radio" name="competitor-form" checked={competitorFormId === cfg.id} onChange={() => setCompetitorFormId(cfg.id)} style={{ accentColor: "var(--color-primary)" }} />
-											<div>
-												<span style={{ fontWeight: 500, fontSize: 14 }}>{cfg.label.th}</span>
-												<span style={{ marginLeft: 6, fontSize: 12, color: "var(--color-muted)" }}>{cfg.label.en}</span>
-												<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>{cfg.steps.length} ขั้นตอน · {cfg.steps.reduce((n, s) => n + s.fields.length, 0)} ฟิลด์</p>
-											</div>
-										</label>
 									))}
 								</div>
 							</div>
-						</div>
-					</div>
+						)}
 
-					{/* ── ผู้ชม card ── */}
-					<div className="card">
-						<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-lg)" }}>
-							<IconUsers size={16} />
-							<h2 style={{ fontSize: 18, margin: 0 }}>ผู้ชม</h2>
-						</div>
-						<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
-							{/* Slug */}
-							<div>
-								<label className="label">URL Path (slug)</label>
-								<div style={{ display: "flex", alignItems: "center" }}>
-									<span style={{ padding: "8px 12px", background: "#f5f0e8", border: "1px solid #d5cfc4", borderRight: "none", borderRadius: "var(--radius-md) 0 0 var(--radius-md)", fontSize: 13, color: "var(--color-muted)", whiteSpace: "nowrap" }}>
-										/{t.slug}/register/
-									</span>
-									<input className="input input-bordered" style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0", flex: 1 }} placeholder="attendee" value={form.attendee_url} onChange={(e) => setForm({ ...form, attendee_url: e.target.value })} />
-								</div>
-							</div>
-							{/* Titles */}
-							<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-sm)" }}>
-								<div>
-									<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (ไทย)</label>
-									<input className="input input-bordered w-full" placeholder="ผู้ชม" value={form.attendee_title} onChange={(e) => setForm({ ...form, attendee_title: e.target.value })} />
-								</div>
-								<div>
-									<label className="label" style={{ fontSize: 12 }}>ชื่อแสดง (EN)</label>
-									<input className="input input-bordered w-full" placeholder="Attendee" value={form.attendee_title_en} onChange={(e) => setForm({ ...form, attendee_title_en: e.target.value })} />
-								</div>
-							</div>
-							{/* Form select */}
-							<div>
-								<label className="label" style={{ fontSize: 12 }}>ฟอร์ม</label>
-								<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-									{/* Legacy option */}
-									<label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${attendeeFormId === "" ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: attendeeFormId === "" ? "var(--color-surface-soft)" : "transparent" }}>
-										<input type="radio" name="attendee-form" checked={attendeeFormId === ""} onChange={() => setAttendeeFormId("")} style={{ accentColor: "var(--color-primary)" }} />
-										<div>
-											<span style={{ fontWeight: 500, fontSize: 14 }}>ลิงก์เดิม (Legacy)</span>
-											<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>ใช้ฟอร์มลงทะเบียนเดิม</p>
-										</div>
-									</label>
-									{Object.values(FORM_CONFIGS).map((cfg) => (
-										<label key={cfg.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${attendeeFormId === cfg.id ? "var(--color-primary, #4f8ef7)" : "var(--color-border)"}`, borderRadius: "var(--radius-md)", cursor: "pointer", background: attendeeFormId === cfg.id ? "var(--color-surface-soft)" : "transparent" }}>
-											<input type="radio" name="attendee-form" checked={attendeeFormId === cfg.id} onChange={() => setAttendeeFormId(cfg.id)} style={{ accentColor: "var(--color-primary)" }} />
-											<div>
-												<span style={{ fontWeight: 500, fontSize: 14 }}>{cfg.label.th}</span>
-												<span style={{ marginLeft: 6, fontSize: 12, color: "var(--color-muted)" }}>{cfg.label.en}</span>
-												<p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--color-muted)" }}>{cfg.steps.length} ขั้นตอน · {cfg.steps.reduce((n, s) => n + s.fields.length, 0)} ฟิลด์</p>
-											</div>
-										</label>
-									))}
-								</div>
-							</div>
-						</div>
-					</div>
-
-					{/* ── ข้อความยืนยันการลงทะเบียน ── */}
-					<div className="card">
-						<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--spacing-sm)" }}>
-							<IconMail size={16} />
-							<h2 style={{ fontSize: 18, margin: 0 }}>ข้อความยืนยันการลงทะเบียน</h2>
-						</div>
-						<p style={{ fontSize: 13, color: "var(--color-muted)", marginTop: 0, marginBottom: "var(--spacing-lg)" }}>
-							แสดงหลังลงทะเบียนสำเร็จ และในอีเมลยืนยัน — แยกตามประเภทผู้ลงทะเบียน
-						</p>
-						<div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
-							{Object.values(FORM_CONFIGS).map(({ id, label }) => ({
-								id,
-								label: `${label.th} (${label.en})`,
-							})).map(({ id, label }) => (
-								<div key={id}>
-									<label className="label" style={{ fontSize: 13 }}>{label}</label>
-									<textarea
-										className="input textarea"
-										rows={3}
-										placeholder={`เช่น กำหนดการ, เวลานัดหมาย, ข้อมูลติดต่อ, ข้อควรทราบ... (เว้นว่างไว้ถ้าไม่ต้องการแสดง)`}
-										value={successMessages[id] || ""}
-										onChange={(e) => setSuccessMessages((prev) => ({ ...prev, [id]: e.target.value }))}
-										style={{ resize: "vertical" }}
-									/>
-								</div>
-							))}
-						</div>
 					</div>
 				</div>
 			)}
@@ -672,10 +762,6 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 						<div>
 							<label className="label">Admin Password</label>
 							<input className="input input-bordered w-full" type="password" placeholder="......" value={form.passwords.admin} onChange={(e) => setForm({ ...form, passwords: { ...form.passwords, admin: e.target.value } })} />
-						</div>
-						<div>
-							<label className="label">Super Admin Password</label>
-							<input className="input input-bordered w-full" type="password" placeholder="......" value={form.passwords.super_admin} onChange={(e) => setForm({ ...form, passwords: { ...form.passwords, super_admin: e.target.value } })} />
 						</div>
 					</div>
 				</div>
@@ -923,6 +1009,13 @@ export default function SettingsPage({ loaderData }: Route.ComponentProps) {
 					</div>
 				</div>
 			)}
+		</div>
+
+		{/* Bottom save button */}
+		<div style={{ maxWidth: 800, margin: "0 auto", padding: "var(--spacing-md) var(--spacing-lg) var(--spacing-xl)", display: "flex", justifyContent: "flex-end" }}>
+			<button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+				<IconSave size={16} /> {saving ? "กำลังบันทึก..." : "บันทึก"}
+			</button>
 		</div>
 		</>
 	);

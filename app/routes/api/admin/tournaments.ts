@@ -31,7 +31,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		checkin_open_at: number;
 		checkin_close_at: number;
 		email_template_html?: string;
-		passwords?: { assistant?: string; admin?: string; super_admin?: string };
+		passwords?: { assistant?: string; admin?: string };
 	};
 
 	const id = crypto.randomUUID();
@@ -43,7 +43,6 @@ export async function action({ request, context }: Route.ActionArgs) {
 	const hashedPasswords: Record<string, string> = {};
 	if (passwords.assistant) hashedPasswords.assistant = await hashPassword(passwords.assistant);
 	if (passwords.admin) hashedPasswords.admin = await hashPassword(passwords.admin);
-	if (passwords.super_admin) hashedPasswords.super_admin = await hashPassword(passwords.super_admin);
 
 	await env.DB.prepare(
 		`INSERT INTO tournaments (id, name, slug, registration_limit, registration_open_at, registration_close_at, checkin_open_at, checkin_close_at, email_template_html, passwords_json, created_at, updated_at)

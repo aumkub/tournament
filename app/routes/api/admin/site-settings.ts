@@ -6,6 +6,7 @@ import {
 	type SiteSettings,
 	type HeaderMode,
 } from "../../../../lib/site-settings";
+import { hashPassword } from "../../../../lib/auth";
 
 function parseHeaderMode(value: FormDataEntryValue | null | undefined): HeaderMode {
 	return value === "image" ? "image" : "text";
@@ -27,6 +28,9 @@ function mergeSettings(
 		footerLine2: partial.footerLine2 ?? current.footerLine2,
 		metaTitle: partial.metaTitle ?? current.metaTitle,
 		metaDescription: partial.metaDescription ?? current.metaDescription,
+		turnstileSiteKey: partial.turnstileSiteKey !== undefined ? partial.turnstileSiteKey : current.turnstileSiteKey,
+		turnstileSecretKey: partial.turnstileSecretKey !== undefined ? partial.turnstileSecretKey : current.turnstileSecretKey,
+		superAdminPasswordHash: partial.superAdminPasswordHash !== undefined ? partial.superAdminPasswordHash : current.superAdminPasswordHash,
 	};
 }
 
@@ -93,6 +97,15 @@ export async function action({ request, context }: Route.ActionArgs) {
 			return Response.json({ error: "กรุณาอัปโหลดรูปโลโก้สำหรับโหมดรูปภาพ" }, { status: 400 });
 		}
 
+		const turnstileSiteKeyRaw = formData.get("turnstile_site_key") as string | null;
+		const turnstileSecretKeyRaw = formData.get("turnstile_secret_key") as string | null;
+		const superAdminPasswordRaw = formData.get("super_admin_password") as string | null;
+
+		let superAdminPasswordHash = current.superAdminPasswordHash;
+		if (superAdminPasswordRaw && superAdminPasswordRaw.trim()) {
+			superAdminPasswordHash = await hashPassword(superAdminPasswordRaw.trim());
+		}
+
 		const settings = mergeSettings(current, {
 			headerMode,
 			headerBrand: (formData.get("header_brand") as string) ?? current.headerBrand,
@@ -104,6 +117,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 			footerLine2: (formData.get("footer_line2") as string) ?? current.footerLine2,
 			metaTitle: (formData.get("meta_title") as string) ?? current.metaTitle,
 			metaDescription: (formData.get("meta_description") as string) ?? current.metaDescription,
+			turnstileSiteKey: turnstileSiteKeyRaw !== null ? (turnstileSiteKeyRaw.trim() || null) : current.turnstileSiteKey,
+			turnstileSecretKey: turnstileSecretKeyRaw !== null ? (turnstileSecretKeyRaw.trim() || null) : current.turnstileSecretKey,
+			superAdminPasswordHash,
 		});
 
 		return saveSettings(env, settings);

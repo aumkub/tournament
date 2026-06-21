@@ -1318,6 +1318,46 @@ p, span, li, td, th, a, option {
 
 /* ── Mobile overrides ────────────────────────────── */
 
+/* ── Tiptap editor content styles ──────────────────── */
+
+.tiptap-content {
+	font-family: var(--font-body);
+	color: var(--color-body);
+	line-height: 1.7;
+}
+.tiptap-content p { margin: 0 0 0.5em; }
+.tiptap-content p:last-child { margin-bottom: 0; }
+.tiptap-content h2 { font-size: 18px; margin: 0.75em 0 0.25em; }
+.tiptap-content h3 { font-size: 15px; margin: 0.6em 0 0.2em; }
+.tiptap-content ul { list-style-type: disc; padding-left: 1.4em; margin: 0.4em 0; }
+.tiptap-content ol { list-style-type: decimal; padding-left: 1.4em; margin: 0.4em 0; }
+.tiptap-content li { margin: 0.15em 0; }
+.tiptap-content strong { font-weight: 600; color: var(--color-ink); }
+.tiptap-content em { font-style: italic; }
+.tiptap-content s { text-decoration: line-through; }
+.tiptap-content hr { border: none; border-top: 1px solid var(--color-hairline); margin: 0.75em 0; }
+.tiptap-content .ProseMirror { outline: none; }
+.tiptap-content .ProseMirror p.is-editor-empty:first-child::before {
+	content: attr(data-placeholder);
+	float: left;
+	color: var(--color-muted);
+	pointer-events: none;
+	height: 0;
+}
+
+/* ── Tiptap rendered output (in register form) ────── */
+
+.form-description { font-size: 14px; line-height: 1.7; color: var(--color-body); }
+.form-description p { margin: 0 0 0.5em; }
+.form-description p:last-child { margin-bottom: 0; }
+.form-description h2 { font-size: 17px; font-weight: 600; margin: 0.6em 0 0.2em; }
+.form-description h3 { font-size: 15px; font-weight: 600; margin: 0.5em 0 0.15em; }
+.form-description ul { list-style-type: disc; padding-left: 1.4em; margin: 0.3em 0; }
+.form-description ol { list-style-type: decimal; padding-left: 1.4em; margin: 0.3em 0; }
+.form-description li { margin: 0.1em 0; }
+.form-description strong { font-weight: 600; color: var(--color-ink); }
+.form-description hr { border: none; border-top: 1px solid var(--color-hairline); margin: 0.6em 0; }
+
 @media (max-width: 640px) {
 	/* Tighter card padding on small screens */
 	.card {
