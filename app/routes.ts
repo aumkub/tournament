@@ -29,6 +29,7 @@ export default [
 	route("api/admin/:slug/stats", "routes/api/admin/stats.ts"),
 	route("api/admin/:slug/export", "routes/api/admin/export.ts"),
 	route("api/admin/:slug/tournament", "routes/api/admin/tournament.ts"),
+	route("api/admin/:slug/registrants/:id/resend-email", "routes/api/admin/resend-email.ts"),
 	route("api/admin/:slug/registrants/:id", "routes/api/admin/registrant-delete.ts"),
 	route("api/admin/:slug/checkin-log", "routes/api/admin/checkin-log.ts"),
 	route("api/admin/:slug/uncheckin", "routes/api/admin/uncheckin.ts"),

@@ -38,10 +38,17 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 			? ((reg.attendee_title as string) || "ผู้เข้าร่วมงาน")
 			: (reg.type as string);
 
-	let successMessage = "";
+	let successMessageTh = "";
+	let successMessageEn = "";
 	try {
-		const msgs = JSON.parse((reg.success_messages_json as string) || "{}") as Record<string, string>;
-		successMessage = (msgs[reg.type as string] || "").trim();
+		const msgs = JSON.parse((reg.success_messages_json as string) || "{}") as Record<string, string | { th: string; en: string }>;
+		const val = msgs[reg.type as string];
+		if (val && typeof val === "object") {
+			successMessageTh = val.th || "";
+			successMessageEn = val.en || "";
+		} else if (typeof val === "string") {
+			successMessageTh = val.trim();
+		}
 	} catch {}
 
 	return {
@@ -53,7 +60,8 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 		type: reg.type as string,
 		typeLabel,
 		qrDataUrl,
-		successMessage,
+		successMessageTh,
+		successMessageEn,
 	};
 }
 
@@ -276,14 +284,19 @@ export default function SuccessPage({ loaderData }: Route.ComponentProps) {
 				</div>
 
 				{/* Custom success message from organizer */}
-				{loaderData.successMessage && (
-					<div className="card mb-lg" style={{ borderLeft: "4px solid var(--color-primary)", background: "var(--color-surface-soft)" }}>
-						<p className="text-sm font-semibold text-body m-0 mb-2">
-							{lang === "th" ? "ข้อความจากผู้จัดงาน" : "Message from organizer"}
-						</p>
-						<p className="text-sm text-body m-0 whitespace-pre-wrap leading-relaxed">{loaderData.successMessage}</p>
-					</div>
-				)}
+				{(loaderData.successMessageTh || loaderData.successMessageEn) && (() => {
+					const html = lang === "en"
+						? (loaderData.successMessageEn || loaderData.successMessageTh)
+						: (loaderData.successMessageTh || loaderData.successMessageEn);
+					return html ? (
+						<div className="card mb-lg" style={{ borderLeft: "4px solid var(--color-primary)", background: "var(--color-surface-soft)" }}>
+							<p className="text-sm font-semibold text-body m-0 mb-2">
+								{lang === "th" ? "ข้อความจากผู้จัดงาน" : "Message from organizer"}
+							</p>
+							<div className="form-description text-body" dangerouslySetInnerHTML={{ __html: html }} />
+						</div>
+					) : null;
+				})()}
 
 				{/* Email sent notice */}
 				{hasEmail ? (

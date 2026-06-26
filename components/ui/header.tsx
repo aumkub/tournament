@@ -6,6 +6,7 @@ import {
 	IconX,
 	IconSettings,
 	IconLogOut,
+	IconList,
 } from "./icons";
 
 const navLinkClass = "inline-flex items-center gap-1.5 text-sm font-medium text-muted no-underline px-3 py-1.5 rounded-md transition-colors hover:text-body hover:bg-surface-soft";
@@ -54,14 +55,14 @@ export function Header() {
 				<nav className="hidden sm:flex items-center gap-xs">
 					<a href="/" className={navLinkClass}>หน้าหลัก</a>
 
+					{authenticated && isAdminPlus && (
+						<a href={backendUrl} className={navLinkClass}>
+							<IconList size={14} /> รายการทั้งหมด
+						</a>
+					)}
 					{authenticated && isSuperAdmin && (
 						<a href="/portal/site-settings" className={navLinkClass}>
 							<IconSettings size={14} /> ตั้งค่าเว็บไซต์
-						</a>
-					)}
-					{authenticated && isAdminPlus && (
-						<a href={backendUrl} className={navLinkClass}>
-							ผู้ดูแลระบบ
 						</a>
 					)}
 					{authenticated && (
@@ -94,6 +95,15 @@ export function Header() {
 					>
 						หน้าหลัก
 					</a>
+					{authenticated && isAdminPlus && (
+						<a
+							href={backendUrl}
+							onClick={() => setMenuOpen(false)}
+							className="text-sm font-medium text-body py-2.5 px-3 rounded-md flex items-center gap-2 no-underline hover:bg-surface-soft"
+						>
+							<IconList size={15} /> รายการทั้งหมด
+						</a>
+					)}
 					{authenticated && isSuperAdmin && (
 						<a
 							href="/portal/site-settings"
@@ -101,15 +111,6 @@ export function Header() {
 							className="text-sm font-medium text-body py-2.5 px-3 rounded-md flex items-center gap-2 no-underline hover:bg-surface-soft"
 						>
 							<IconSettings size={15} /> ตั้งค่าเว็บไซต์
-						</a>
-					)}
-					{authenticated && isAdminPlus && (
-						<a
-							href={backendUrl}
-							onClick={() => setMenuOpen(false)}
-							className="text-sm font-medium text-body py-2.5 px-3 rounded-md flex items-center gap-2 no-underline hover:bg-surface-soft"
-						>
-							ผู้ดูแลระบบ
 						</a>
 					)}
 					{authenticated && (

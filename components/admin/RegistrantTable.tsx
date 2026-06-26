@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { IconCheck, IconX, IconEye, IconTrash, IconArrowLeft, IconArrowRight } from "../ui/icons";
+import { IconCheck, IconX, IconEye, IconTrash, IconArrowLeft, IconArrowRight, IconMail } from "../ui/icons";
 import { Select } from "../ui/Select";
 import { FORM_CONFIGS } from "../../lib/form-configs/index";
 
@@ -103,6 +103,8 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 	const [deleting, setDeleting] = useState(false);
 	const [deleteConfirm, setDeleteConfirm] = useState(false);
 	const [checkingIn, setCheckingIn] = useState(false);
+	const [resendingEmail, setResendingEmail] = useState(false);
+	const [resendMessage, setResendMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 	const [typeOptions, setTypeOptions] = useState<TypeCount[]>([]);
 
 	// Silent background refetch (no loading spinner)
@@ -185,9 +187,11 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 			const idx = registrants.findIndex((r) => r.id === selectedReg.id);
 			if (e.key === "ArrowLeft" && idx > 0) {
 				setDeleteConfirm(false);
+				setResendMessage(null);
 				setSelectedReg(registrants[idx - 1]);
 			} else if (e.key === "ArrowRight" && idx < registrants.length - 1) {
 				setDeleteConfirm(false);
+				setResendMessage(null);
 				setSelectedReg(registrants[idx + 1]);
 			}
 		};
@@ -266,6 +270,32 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 		}
 	};
 
+	const handleResendEmail = async (reg: Registrant) => {
+		if (!reg.email?.trim()) {
+			setResendMessage({ type: "error", text: "ไม่มีอีเมลสำหรับผู้ลงทะเบียนนี้" });
+			return;
+		}
+		setResendingEmail(true);
+		setResendMessage(null);
+		try {
+			const res = await fetch(`/api/admin/${slug}/registrants/${reg.id}/resend-email`, {
+				method: "POST",
+			});
+			const data = await res.json().catch(() => ({}));
+			if (res.ok) {
+				setResendMessage({ type: "success", text: data.message || `ส่งอีเมลไปที่ ${reg.email} แล้ว` });
+			} else {
+				setResendMessage({ type: "error", text: data.error || "ส่งอีเมลไม่สำเร็จ" });
+			}
+		} catch {
+			setResendMessage({ type: "error", text: "ส่งอีเมลไม่สำเร็จ" });
+		} finally {
+			setResendingEmail(false);
+		}
+	};
+
+	const canResendEmail = role === "admin" || role === "super_admin";
+
 	const totalPages = Math.ceil(total / pageSize);
 
 	return (
@@ -324,7 +354,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 							registrants.map((reg) => (
 								<tr
 									key={reg.id}
-									onClick={() => setSelectedReg(reg)}
+									onClick={() => { setResendMessage(null); setSelectedReg(reg); }}
 									className="cursor-pointer border-b border-black/5 transition-colors hover:bg-surface-soft"
 								>
 									<td className="px-4 py-3 text-ink">
@@ -356,7 +386,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 											<button
 												className="btn btn-sm btn-ghost"
 												style={{ padding: "4px 8px", minHeight: "auto" }}
-												onClick={() => setSelectedReg(reg)}
+												onClick={() => { setResendMessage(null); setSelectedReg(reg); }}
 												title="ดูรายละเอียด"
 											>
 												<IconEye size={15} />
@@ -365,7 +395,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 												<button
 													className="btn btn-sm btn-ghost text-error"
 													style={{ padding: "4px 8px", minHeight: "auto" }}
-													onClick={() => { setSelectedReg(reg); setDeleteConfirm(true); }}
+													onClick={() => { setSelectedReg(reg); setDeleteConfirm(true); setResendMessage(null); }}
 													title="ลบ"
 												>
 													<IconTrash size={15} />
@@ -426,7 +456,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 				<div
 					className="fixed inset-0 flex items-center justify-center z-[1000]"
 					style={{ background: "rgba(0,0,0,0.5)" }}
-					onClick={() => setSelectedReg(null)}
+					onClick={() => { setSelectedReg(null); setResendMessage(null); }}
 				>
 					<div
 						className="card flex flex-col overflow-hidden m-lg"
@@ -437,8 +467,11 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 						<div className="flex justify-between items-center px-lg py-md border-b border-black/5 flex-shrink-0 bg-white">
 							<div>
 								<p className="text-xl font-semibold text-ink m-0">{parseName(selectedReg)}</p>
-								<div className="flex items-center gap-sm">
+								<div className="flex items-center gap-sm flex-wrap">
 									<span className="text-sm text-muted">{getTypeLabel(selectedReg.type, typeLabels)}</span>
+									{selectedReg.email && (
+										<span className="text-sm text-muted">{selectedReg.email}</span>
+									)}
 									<span className="inline-flex items-center gap-1 font-mono font-semibold tracking-widest text-muted bg-surface-soft px-2 py-0.5 rounded text-xs">
 										{selectedReg.id}
 										<CopyButton text={selectedReg.id} />
@@ -446,7 +479,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 								</div>
 							</div>
 							<button
-								onClick={() => { setSelectedReg(null); setDeleteConfirm(false); }}
+								onClick={() => { setSelectedReg(null); setDeleteConfirm(false); setResendMessage(null); }}
 								className="p-1 text-muted bg-transparent border-none cursor-pointer hover:text-ink"
 							>
 								<IconX size={20} />
@@ -469,7 +502,17 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 										</>
 									) : "ยังไม่เช็คอิน"}
 								</p>
-			
+								{resendMessage && (
+									<p
+										className={`mt-sm m-0 text-sm rounded px-2 py-1 ${
+											resendMessage.type === "success"
+												? "bg-green-100 text-green-800"
+												: "bg-red-100 text-red-800"
+										}`}
+									>
+										{resendMessage.text}
+									</p>
+								)}
 							</div>
 						</div>
 
@@ -480,7 +523,18 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 							const hasNext = idx < registrants.length - 1;
 							return (
 								<div className="flex items-center justify-between px-lg py-md border-t border-black/5 bg-canvas flex-shrink-0 gap-sm">
-									<div className="flex items-center gap-sm">
+									<div className="flex items-center gap-sm flex-wrap">
+										{canResendEmail && selectedReg.email && (
+											<button
+												className="btn btn-sm btn-secondary"
+												disabled={resendingEmail}
+												onClick={() => handleResendEmail(selectedReg)}
+												title="ส่งอีเมล QR Code อีกครั้ง"
+											>
+												<IconMail size={14} />
+												{resendingEmail ? "กำลังส่ง..." : "ส่งอีเมลอีกครั้ง"}
+											</button>
+										)}
 										{!selectedReg.checked_in ? (
 											<button
 												className="btn btn-sm btn-secondary"
@@ -528,7 +582,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 									<div className="flex items-center gap-xs">
 										<span className="text-smtext-muted">{idx + 1} / {registrants.length}</span>
 										<button
-											onClick={() => { setDeleteConfirm(false); setSelectedReg(registrants[idx - 1]); }}
+											onClick={() => { setDeleteConfirm(false); setResendMessage(null); setSelectedReg(registrants[idx - 1]); }}
 											disabled={!hasPrev}
 											className="btn btn-sm btn-ghost"
 											style={{ padding: "6px 10px", opacity: hasPrev ? 1 : 0.3 }}
@@ -536,7 +590,7 @@ export function RegistrantTable({ slug, typeLabels, role }: RegistrantTableProps
 											<IconArrowLeft size={16} />
 										</button>
 										<button
-											onClick={() => { setDeleteConfirm(false); setSelectedReg(registrants[idx + 1]); }}
+											onClick={() => { setDeleteConfirm(false); setResendMessage(null); setSelectedReg(registrants[idx + 1]); }}
 											disabled={!hasNext}
 											className="btn btn-sm btn-ghost"
 											style={{ padding: "6px 10px", opacity: hasNext ? 1 : 0.3 }}
