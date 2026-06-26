@@ -15,11 +15,11 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 	const stats = await env.DB.prepare(
 		`SELECT
       COUNT(*) as total,
-      SUM(CASE WHEN type = 'competitor' THEN 1 ELSE 0 END) as competitors,
-      SUM(CASE WHEN type = 'attendee' THEN 1 ELSE 0 END) as attendees,
+      SUM(CASE WHEN r.type = 'competitor' OR (t.competitor_form_id IS NOT NULL AND r.type = t.competitor_form_id) THEN 1 ELSE 0 END) as competitors,
+      SUM(CASE WHEN r.type = 'attendee' OR (t.attendee_form_id IS NOT NULL AND r.type = t.attendee_form_id) THEN 1 ELSE 0 END) as attendees,
       SUM(CASE WHEN checked_in = 1 THEN 1 ELSE 0 END) as checked_in,
-      SUM(CASE WHEN type = 'competitor' AND checked_in = 1 THEN 1 ELSE 0 END) as competitors_checked_in,
-      SUM(CASE WHEN type = 'attendee' AND checked_in = 1 THEN 1 ELSE 0 END) as attendees_checked_in
+      SUM(CASE WHEN (r.type = 'competitor' OR (t.competitor_form_id IS NOT NULL AND r.type = t.competitor_form_id)) AND checked_in = 1 THEN 1 ELSE 0 END) as competitors_checked_in,
+      SUM(CASE WHEN (r.type = 'attendee' OR (t.attendee_form_id IS NOT NULL AND r.type = t.attendee_form_id)) AND checked_in = 1 THEN 1 ELSE 0 END) as attendees_checked_in
     FROM registrations r JOIN tournaments t ON r.tournament_id = t.id WHERE t.slug = ? AND t.deleted_at IS NULL`,
 	)
 		.bind(slug)

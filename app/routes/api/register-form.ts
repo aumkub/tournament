@@ -165,12 +165,15 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
 	// Broadcast new registration to admin dashboards
 	try {
+		const resolvedType = body.form_id === (tournament.competitor_form_id as string) ? "competitor"
+			: body.form_id === (tournament.attendee_form_id as string) ? "attendee"
+			: body.form_id;
 		const doId = env.TOURNAMENT_ROOM.idFromName(slug);
 		const stub = env.TOURNAMENT_ROOM.get(doId);
 		await stub.fetch("https://internal/broadcast", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ type: "register", registration_id: id, registration_type: body.form_id, submitted_at: now }),
+			body: JSON.stringify({ type: "register", registration_id: id, registration_type: resolvedType, submitted_at: now }),
 		});
 	} catch {}
 
